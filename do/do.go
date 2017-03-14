@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/skibish/ddns/misc"
 )
 
 var url = "https://api.digitalocean.com/v2"
@@ -60,7 +62,7 @@ func (d *DigitalOcean) GetDomainRecords() ([]Record, error) {
 
 	defer res.Body.Close()
 
-	if !succss(res.StatusCode) {
+	if !misc.Success(res.StatusCode) {
 		return nil, ErrorRequset
 	}
 
@@ -92,12 +94,12 @@ func (d *DigitalOcean) CreateRecord(record Record) (*Record, error) {
 
 	defer res.Body.Close()
 
-	if !succss(res.StatusCode) {
+	if !misc.Success(res.StatusCode) {
 		return nil, ErrorRequset
 	}
 
 	var resRecord domainRecord
-	errDecode := json.NewDecoder(res.Body).Decode(&record)
+	errDecode := json.NewDecoder(res.Body).Decode(&resRecord)
 	if errDecode != nil {
 		return nil, errDecode
 	}
@@ -124,12 +126,12 @@ func (d *DigitalOcean) UpdateRecord(record Record) (*Record, error) {
 
 	defer res.Body.Close()
 
-	if !succss(res.StatusCode) {
+	if !misc.Success(res.StatusCode) {
 		return nil, ErrorRequset
 	}
 
 	var resRecord domainRecord
-	errDecode := json.NewDecoder(res.Body).Decode(&record)
+	errDecode := json.NewDecoder(res.Body).Decode(&resRecord)
 	if errDecode != nil {
 		return nil, errDecode
 	}
@@ -137,11 +139,7 @@ func (d *DigitalOcean) UpdateRecord(record Record) (*Record, error) {
 	return &resRecord.Record, nil
 }
 
-// success check that response is in range of success codes
-func succss(code int) bool {
-	return code >= 200 && code < 300
-}
-
+// prepareRequest bootstrap request with needed information
 func (d *DigitalOcean) prepareRequest(method, url string, body io.Reader) (*http.Request, error) {
 	req, errNR := http.NewRequest(method, url, body)
 	if errNR != nil {
