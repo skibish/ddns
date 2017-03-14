@@ -99,7 +99,6 @@ func syncRecords(cf *conf.Configuration, allRecords []do.Record) error {
 		// if there was no match, we should create new DNS record
 		// and updatee current configuration
 		if cr.ID == 0 {
-			log.Debug("creating new record")
 			cr.Data = currentIP
 
 			newR, errCreate := digio.CreateRecord(cr)
