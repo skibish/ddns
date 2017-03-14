@@ -32,7 +32,14 @@ type domainRecord struct {
 	Record Record `json:"domain_record"`
 }
 
-// DigitalOcean is a main strucutre
+// DigitalOceanInterface should be implemented by DigitalOcean
+type DigitalOceanInterface interface {
+	GetDomainRecords() ([]Record, error)
+	CreateRecord(record Record) (*Record, error)
+	UpdateRecord(record Record) (*Record, error)
+}
+
+// DigitalOcean is a main strucutre (implements DigitalOceanIterface)
 type DigitalOcean struct {
 	c      *http.Client
 	token  string

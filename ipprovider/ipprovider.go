@@ -14,6 +14,9 @@ type IPProvider interface {
 	GetIP() (string, error)
 }
 
+// FGetIP is a GetIP type
+type FGetIP func() string
+
 // Register registers IP providers
 func Register(c *http.Client) {
 	providers = append(providers,
