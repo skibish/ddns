@@ -19,7 +19,7 @@ var (
 )
 
 var (
-	reqTimeouts = flag.Duration("req-timeout", 1*time.Second, "Request timeout to external resources")
+	reqTimeouts = flag.Duration("req-timeout", 10*time.Second, "Request timeout to external resources")
 	checkPeriod = flag.Duration("check-period", 5*time.Minute, "Check if IP has been changed period")
 	confFile    = flag.String("conf-file", "$HOME/.ddns.yml", "Location of the configuration file")
 )
