@@ -16,12 +16,17 @@ This project is your own DDNS solution and will work for free (thanks to [Digita
 
 Put binary in `/usr/local/bin`.
 
-Now you can start `ddns` like this in background:
+And start it as:
+
+```bash
+ddns
+```
+
+Or you can start `ddns` in background:
 
 ```bash
 ddns > /dev/null 2>&1 &
 ```
-
 
 ## Documentation
 
