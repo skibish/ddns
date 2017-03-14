@@ -44,12 +44,12 @@ func TestSyncRecordsCreateNew(t *testing.T) {
 
 	cf := &conf.Configuration{
 		Records: []do.Record{
-			do.Record{Type: "A", Name: "test"},
+			{Type: "A", Name: "test"},
 		},
 	}
 
 	allRecords := []do.Record{
-		do.Record{Type: "A", Name: "test"},
+		{Type: "A", Name: "test"},
 	}
 
 	currentIP = "127.0.0.1"
@@ -77,12 +77,12 @@ func TestSyncRecordsCreateError(t *testing.T) {
 
 	cf := &conf.Configuration{
 		Records: []do.Record{
-			do.Record{Type: "A", Name: "test"},
+			{Type: "A", Name: "test"},
 		},
 	}
 
 	allRecords := []do.Record{
-		do.Record{Type: "A", Name: "test"},
+		{Type: "A", Name: "test"},
 	}
 
 	currentIP = "127.0.0.1"
@@ -110,12 +110,12 @@ func TestSyncRecordsUpdateRecord(t *testing.T) {
 
 	cf := &conf.Configuration{
 		Records: []do.Record{
-			do.Record{Type: "A", Name: "test"},
+			{Type: "A", Name: "test"},
 		},
 	}
 
 	allRecords := []do.Record{
-		do.Record{ID: 123, Type: "A", Name: "test"},
+		{ID: 123, Type: "A", Name: "test"},
 	}
 
 	currentIP = "127.0.0.1"
@@ -148,12 +148,12 @@ func TestSyncRecordsUpdateError(t *testing.T) {
 
 	cf := &conf.Configuration{
 		Records: []do.Record{
-			do.Record{Type: "A", Name: "test"},
+			{Type: "A", Name: "test"},
 		},
 	}
 
 	allRecords := []do.Record{
-		do.Record{ID: 123, Type: "A", Name: "test"},
+		{ID: 123, Type: "A", Name: "test"},
 	}
 
 	currentIP = "127.0.0.1"
@@ -175,7 +175,7 @@ func TestCheckAndUpdateOnlyCheck(t *testing.T) {
 
 	cf := &conf.Configuration{
 		Records: []do.Record{
-			do.Record{Type: "A", Name: "test"},
+			{Type: "A", Name: "test"},
 		},
 	}
 
@@ -212,7 +212,7 @@ func TestCheckAndUpdateOnlyUpdate(t *testing.T) {
 
 	cf := &conf.Configuration{
 		Records: []do.Record{
-			do.Record{Type: "A", Name: "test"},
+			{Type: "A", Name: "test"},
 		},
 	}
 
@@ -244,7 +244,7 @@ func TestCheckAndUpdateError(t *testing.T) {
 
 	cf := &conf.Configuration{
 		Records: []do.Record{
-			do.Record{Type: "A", Name: "test"},
+			{Type: "A", Name: "test"},
 		},
 	}
 

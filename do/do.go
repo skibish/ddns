@@ -39,7 +39,7 @@ type DigitalOceanInterface interface {
 	UpdateRecord(record Record) (*Record, error)
 }
 
-// DigitalOcean is a main strucutre (implements DigitalOceanIterface)
+// DigitalOcean is a main structure (implements DigitalOceanIterface)
 type DigitalOcean struct {
 	c      *http.Client
 	token  string
