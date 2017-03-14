@@ -1,1 +1,54 @@
 # DDNS
+
+Personal DDNS client with [Digital Ocean Networking](https://www.digitalocean.com/products/networking/) DNS as backend.
+
+## Motivation
+
+We have services like [DynDNS](http://dyn.com/dns/), [No-IP](http://www.noip.com/) to access PCs remotely. But do we need them?
+This project is your own DDNS solution and will work for free (thanks to [Digital Ocean Networking](https://www.digitalocean.com/products/networking/) DNS).
+
+## What is DDNS?
+
+*From [Wikipedia](https://en.wikipedia.org/wiki/Dynamic_DNS)*
+> Dynamic DNS (DDNS or DynDNS) is a method of automatically updating a name server in the Domain Name System (DNS), often in real time, with the active DDNS configuration of its configured hostnames, addresses or other information.
+
+## Documentation
+
+You can download binary for your OS from [releases page](https://github.com/skibish/ddns/releases).
+
+> **ATTENTION!** Currently tested on Linux and macOS.
+
+Run `ddns -h`, to see help. It will output:
+
+```text
+
+```
+
+**Configuration should be supplied.** By default it is read from `$HOME/.ddns.yml`.
+
+Configuration should be in the following format:
+```text
+token: AMAZING TOKEN  # Digital Ocean token
+domain: example.com   # Domain to update
+records:              # Records of the domain to update
+  - type: A           # Record type
+    name: www         # Record name
+  - type: A
+    name: home
+```
+
+You need to setup your domain in Digital Ocean Networks panel.
+
+In your domain name provider configuration point domain to Digital Ocean NS records.
+
+*Refer to: [How To Set Up a Host Name with DigitalOcean](https://www.digitalocean.com/community/tutorials/how-to-set-up-a-host-name-with-digitalocean)*
+
+### How to start
+
+Put binary in `/usr/local/bin`.
+
+Now you can start `ddns` like this in background:
+
+```bash
+ddns > /dev/null 2>&1 &
+```
