@@ -12,6 +12,17 @@ This project is your own DDNS solution and will work for free (thanks to [Digita
 *From [Wikipedia](https://en.wikipedia.org/wiki/Dynamic_DNS)*
 > Dynamic DNS (DDNS or DynDNS) is a method of automatically updating a name server in the Domain Name System (DNS), often in real time, with the active DDNS configuration of its configured hostnames, addresses or other information.
 
+## How to start
+
+Put binary in `/usr/local/bin`.
+
+Now you can start `ddns` like this in background:
+
+```bash
+ddns > /dev/null 2>&1 &
+```
+
+
 ## Documentation
 
 You can download binary for your OS from [releases page](https://github.com/skibish/ddns/releases).
@@ -21,13 +32,19 @@ You can download binary for your OS from [releases page](https://github.com/skib
 Run `ddns -h`, to see help. It will output:
 
 ```text
-
+Usage of ddns:
+  -check-period duration
+    	Check if IP has been changed period (default 5m0s)
+  -conf-file string
+    	Location of the configuration file (default "$HOME/.ddns.yml")
+  -req-timeout duration
+    	Request timeout to external resources (default 10s)
 ```
 
 **Configuration should be supplied.** By default it is read from `$HOME/.ddns.yml`.
 
 Configuration should be in the following format:
-```text
+```yaml
 token: AMAZING TOKEN  # Digital Ocean token
 domain: example.com   # Domain to update
 records:              # Records of the domain to update
@@ -42,13 +59,3 @@ You need to setup your domain in Digital Ocean Networks panel.
 In your domain name provider configuration point domain to Digital Ocean NS records.
 
 *Refer to: [How To Set Up a Host Name with DigitalOcean](https://www.digitalocean.com/community/tutorials/how-to-set-up-a-host-name-with-digitalocean)*
-
-### How to start
-
-Put binary in `/usr/local/bin`.
-
-Now you can start `ddns` like this in background:
-
-```bash
-ddns > /dev/null 2>&1 &
-```
