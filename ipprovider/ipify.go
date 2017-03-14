@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/skibish/ddns/misc"
 )
 
 // Ipify is an abstraction to get IP
@@ -33,7 +35,7 @@ func (i *Ipify) GetIP() (string, error) {
 
 	defer resp.Body.Close()
 
-	if !success(resp.StatusCode) {
+	if !misc.Success(resp.StatusCode) {
 		return "", fmt.Errorf("Status code is not in success range: %d", resp.StatusCode)
 	}
 

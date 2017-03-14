@@ -20,10 +20,11 @@ func Register(c *http.Client) {
 		newIfConfig(c), newIpify(c), newWtfIsMyIP(c))
 }
 
-// GetIP retur ip from first successful source
+// GetIP return ip from first successful source
 func GetIP() (ip string) {
 	for _, v := range providers {
 		var errGet error
+
 		ip, errGet = v.GetIP()
 		if errGet != nil {
 			log.Warn(errGet.Error())
@@ -34,8 +35,4 @@ func GetIP() (ip string) {
 	}
 
 	return ip
-}
-
-func success(status int) bool {
-	return status >= 200 && status < 300
 }
