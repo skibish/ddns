@@ -17,8 +17,8 @@ type Configuration struct {
 	Records []do.Record `yaml:"records"`
 }
 
-// Valid checks that provided configuration is valid
-func (c *Configuration) Valid() error {
+// valid checks that provided configuration is valid
+func (c *Configuration) valid() error {
 	if c.Token == "" {
 		return errors.New("Token can't be empty")
 	}
@@ -43,6 +43,11 @@ func NewConfiguration(path string) (*Configuration, error) {
 	errUn := yaml.Unmarshal(file, &cf)
 	if errUn != nil {
 		return nil, errUn
+	}
+
+	errValid := cf.valid()
+	if errValid != nil {
+		return nil, errValid
 	}
 
 	return &cf, nil
