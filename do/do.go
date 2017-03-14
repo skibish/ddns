@@ -21,7 +21,7 @@ type Record struct {
 	ID   uint64 `json:"id"`
 	Type string `yaml:"type" json:"type"`
 	Name string `yaml:"name" json:"name"`
-	Data string `yaml:"data" json:"data"`
+	Data string `json:"data"`
 }
 
 type domainRecords struct {

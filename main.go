@@ -91,7 +91,7 @@ func syncRecords(cf *conf.Configuration, allRecords []do.Record) error {
 			// we are only interested in those who have full match
 			// by `type AND name`
 			if cr.Type == rdr.Type && cr.Name == rdr.Name {
-				cr.ID = rdr.ID
+				cr = rdr
 				break
 			}
 		}
@@ -99,11 +99,24 @@ func syncRecords(cf *conf.Configuration, allRecords []do.Record) error {
 		// if there was no match, we should create new DNS record
 		// and updatee current configuration
 		if cr.ID == 0 {
+			log.Debug("creating new record")
 			cr.Data = currentIP
 
 			newR, errCreate := digio.CreateRecord(cr)
 			if errCreate != nil {
 				return errCreate
+			}
+
+			cr = *newR
+		}
+
+		// if IPs are different, update record
+		if cr.Data != currentIP {
+			cr.Data = currentIP
+
+			newR, errUpdate := digio.UpdateRecord(cr)
+			if errUpdate != nil {
+				log.Errorf("Update failed: %s", errUpdate.Error())
 			}
 
 			cr = *newR
