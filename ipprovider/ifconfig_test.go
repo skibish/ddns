@@ -61,7 +61,7 @@ func TestIfConfigNotSuccessCode(t *testing.T) {
 		return
 	}
 
-	if errGet.Error() != "Status code is not in success range: 429" {
+	if errGet.Error() != "ifconfig: Status code is not in success range: 429" {
 		t.Error("Error was, but not about status code")
 		return
 	}
@@ -86,7 +86,7 @@ func TestIfConfigFailedDecode(t *testing.T) {
 		return
 	}
 
-	if errGet.Error() != "invalid character 's' looking for beginning of value" {
+	if errGet.Error() != "ifconfig: invalid character 's' looking for beginning of value" {
 		t.Error("Error was, but not related to parsing")
 		return
 	}
@@ -111,8 +111,8 @@ func TestIfConfigFailedOnGet(t *testing.T) {
 		return
 	}
 
-	if errGet.Error() != "Get http://127.0.0.1:1234: dial tcp 127.0.0.1:1234: getsockopt: connection refused" {
-		t.Error("Error was, but not related to the request fail")
+	if errGet.Error() != "ifconfig: Get http://127.0.0.1:1234: dial tcp 127.0.0.1:1234: getsockopt: connection refused" {
+		t.Errorf("Error was, but not related to the request fail: %v", errGet.Error())
 		return
 	}
 }

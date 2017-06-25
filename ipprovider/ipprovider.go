@@ -8,6 +8,12 @@ import (
 
 var providers []IPProvider
 
+var (
+	ifconfigName  = "ifconfig"
+	ipifyName     = "ipify"
+	wtfismyipName = "wtfismyip"
+)
+
 // IPProvider is an interface that should
 // be implemented by all IP providers.
 type IPProvider interface {

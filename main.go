@@ -32,6 +32,7 @@ func init() {
 	log.SetFormatter(&log.TextFormatter{
 		DisableColors: true,
 	})
+	log.SetLevel(log.DebugLevel)
 	log.SetOutput(os.Stdout)
 }
 

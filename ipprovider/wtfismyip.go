@@ -31,19 +31,19 @@ func newWtfIsMyIP(c *http.Client) *WtfIsMyIP {
 func (i *WtfIsMyIP) GetIP() (string, error) {
 	resp, errGet := i.c.Get(i.url)
 	if errGet != nil {
-		return "", errGet
+		return "", fmt.Errorf("%s: %s", wtfismyipName, errGet.Error())
 	}
 
 	defer resp.Body.Close()
 
 	if !misc.Success(resp.StatusCode) {
-		return "", fmt.Errorf("Status code is not in success range: %d", resp.StatusCode)
+		return "", fmt.Errorf("%s: Status code is not in success range: %d", wtfismyipName, resp.StatusCode)
 	}
 
 	var r wtfIsMyIPResponse
 	errDecode := json.NewDecoder(resp.Body).Decode(&r)
 	if errDecode != nil {
-		return "", errDecode
+		return "", fmt.Errorf("%s: %s", wtfismyipName, errDecode.Error())
 	}
 
 	return r.IP, nil

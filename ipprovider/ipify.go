@@ -30,19 +30,19 @@ func newIpify(c *http.Client) *Ipify {
 func (i *Ipify) GetIP() (string, error) {
 	resp, errGet := i.c.Get(i.url)
 	if errGet != nil {
-		return "", errGet
+		return "", fmt.Errorf("%s: %s", ipifyName, errGet.Error())
 	}
 
 	defer resp.Body.Close()
 
 	if !misc.Success(resp.StatusCode) {
-		return "", fmt.Errorf("Status code is not in success range: %d", resp.StatusCode)
+		return "", fmt.Errorf("%s: Status code is not in success range: %d", ipifyName, resp.StatusCode)
 	}
 
 	var r ipifyResponse
 	errDecode := json.NewDecoder(resp.Body).Decode(&r)
 	if errDecode != nil {
-		return "", errDecode
+		return "", fmt.Errorf("%s: %s", ipifyName, errDecode.Error())
 	}
 
 	return r.IP, nil
