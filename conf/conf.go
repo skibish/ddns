@@ -12,9 +12,10 @@ import (
 
 // Configuration is a structure of the configuration
 type Configuration struct {
-	Token   string      `yaml:"token"`
-	Domain  string      `yaml:"domain"`
-	Records []do.Record `yaml:"records"`
+	Token   string                 `yaml:"token"`
+	Domain  string                 `yaml:"domain"`
+	Records []do.Record            `yaml:"records"`
+	Notify  map[string]interface{} `yaml:"notify"`
 }
 
 // valid checks that provided configuration is valid
