@@ -73,8 +73,7 @@ notify:               # Optional notifiers
 
 ### Notifications
 
-Not you can also add notifications to other systems. These notifications are based on [sirupsen/logrus hooks](https://github.com/sirupsen/logrus#hooks)
- Add them to the configuration file as:
+Not you can also add notifications to other systems. These notifications are based on [sirupsen/logrus hooks](https://github.com/sirupsen/logrus#hooks). Add them to the configuration file as:
 
 ```yaml
 # config part from the top
