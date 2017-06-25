@@ -72,7 +72,7 @@ func TestGetDomainRecordsIncorrectStatusCode(t *testing.T) {
 	d := NewDigitalOcean("example.com", "amazingtoken", &http.Client{})
 
 	_, errGet := d.GetDomainRecords()
-	if errGet != ErrorRequset {
+	if errGet == nil {
 		t.Error("Should be error, but everything is OK")
 		return
 	}
@@ -91,7 +91,7 @@ func TestGetDomainRecordsParseError(t *testing.T) {
 	d := NewDigitalOcean("example.com", "amazingtoken", &http.Client{})
 
 	_, errGet := d.GetDomainRecords()
-	if errGet.Error() != "invalid character 'a' looking for beginning of value" {
+	if errGet.Error() != "digitalocean: invalid character 'a' looking for beginning of value" {
 		t.Error("Go not expected value: ", errGet.Error())
 		return
 	}
@@ -161,7 +161,7 @@ func TestCreateRecordIncorrectStatusCode(t *testing.T) {
 	d := NewDigitalOcean("example.com", "amazingtoken", &http.Client{})
 
 	_, errGet := d.CreateRecord(Record{})
-	if errGet != ErrorRequset {
+	if errGet == nil {
 		t.Error("Should be error, but everything is OK")
 		return
 	}
@@ -180,7 +180,7 @@ func TestCreateRecordParseError(t *testing.T) {
 	d := NewDigitalOcean("example.com", "amazingtoken", &http.Client{})
 
 	_, errGet := d.CreateRecord(Record{})
-	if errGet.Error() != "invalid character 'a' looking for beginning of value" {
+	if errGet.Error() != "digitalocean: invalid character 'a' looking for beginning of value" {
 		t.Error("Go not expected value: ", errGet.Error())
 		return
 	}
@@ -250,7 +250,7 @@ func TestUpdateRecordIncorrectStatusCode(t *testing.T) {
 	d := NewDigitalOcean("example.com", "amazingtoken", &http.Client{})
 
 	_, errGet := d.UpdateRecord(Record{})
-	if errGet != ErrorRequset {
+	if errGet == nil {
 		t.Error("Should be error, but everything is OK")
 		return
 	}
@@ -269,7 +269,7 @@ func TestUpdateRecordParseError(t *testing.T) {
 	d := NewDigitalOcean("example.com", "amazingtoken", &http.Client{})
 
 	_, errGet := d.UpdateRecord(Record{})
-	if errGet.Error() != "invalid character 'a' looking for beginning of value" {
+	if errGet.Error() != "digitalocean: invalid character 'a' looking for beginning of value" {
 		t.Error("Go not expected value: ", errGet.Error())
 		return
 	}

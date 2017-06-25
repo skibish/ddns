@@ -51,6 +51,12 @@ Usage of ddns:
 
 **Configuration should be supplied.** By default it is read from `$HOME/.ddns.yml`.
 
+You need to setup your domain in Digital Ocean Networks panel.
+
+In your domain name provider configuration point domain to Digital Ocean NS records.
+
+*Refer to: [How To Set Up a Host Name with DigitalOcean](https://www.digitalocean.com/community/tutorials/how-to-set-up-a-host-name-with-digitalocean)*
+
 Configuration should be in the following format:
 ```yaml
 token: AMAZING TOKEN  # Digital Ocean token
@@ -60,10 +66,34 @@ records:              # Records of the domain to update
     name: www         # Record name
   - type: A
     name: home
+notify:               # Optional notifiers
+  smtp:
+    read: bellow
 ```
 
-You need to setup your domain in Digital Ocean Networks panel.
+### Notifications
 
-In your domain name provider configuration point domain to Digital Ocean NS records.
+Not you can also add notifications to other systems. These notifications are based on [sirupsen/logrus hooks](https://github.com/sirupsen/logrus#hooks). Add them to the configuration file as:
 
-*Refer to: [How To Set Up a Host Name with DigitalOcean](https://www.digitalocean.com/community/tutorials/how-to-set-up-a-host-name-with-digitalocean)*
+```yaml
+# config part from the top
+#...
+
+notify:
+  <name of notification>:
+    # ...configuration
+```
+
+Currently supported notifications are listed bellow:
+
+**SMTP**
+
+```yaml
+smtp:
+  user: "foo@bar.com"
+  password: "1234"
+  host: "localhost"
+  port: "22"
+  to: "foo@foo.com"
+  subject: "My DDNS sending me a message"
+```

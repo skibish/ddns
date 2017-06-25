@@ -11,6 +11,8 @@ import (
 	"github.com/skibish/ddns/misc"
 )
 
+var name = "digitalocean"
+
 var url = "https://api.digitalocean.com/v2"
 
 // ErrorRequset is returned when some request failed
@@ -59,24 +61,24 @@ func NewDigitalOcean(domain, token string, c *http.Client) *DigitalOcean {
 func (d *DigitalOcean) GetDomainRecords() ([]Record, error) {
 	req, errNR := d.prepareRequest("GET", fmt.Sprintf("%s/domains/%s/records", url, d.domain), nil)
 	if errNR != nil {
-		return nil, errNR
+		return nil, fmt.Errorf("%s: %s", name, errNR.Error())
 	}
 
 	res, errDo := d.c.Do(req)
 	if errDo != nil {
-		return nil, errDo
+		return nil, fmt.Errorf("%s: %s", name, errDo.Error())
 	}
 
 	defer res.Body.Close()
 
 	if !misc.Success(res.StatusCode) {
-		return nil, ErrorRequset
+		return nil, fmt.Errorf("%s: %s", name, ErrorRequset.Error())
 	}
 
 	var records domainRecords
 	errDecode := json.NewDecoder(res.Body).Decode(&records)
 	if errDecode != nil {
-		return nil, errDecode
+		return nil, fmt.Errorf("%s: %s", name, errDecode.Error())
 	}
 
 	return records.Records, nil
@@ -86,29 +88,29 @@ func (d *DigitalOcean) GetDomainRecords() ([]Record, error) {
 func (d *DigitalOcean) CreateRecord(record Record) (*Record, error) {
 	body, errMarsh := json.Marshal(record)
 	if errMarsh != nil {
-		return nil, errMarsh
+		return nil, fmt.Errorf("%s: %s", name, errMarsh.Error())
 	}
 
 	req, errNR := d.prepareRequest("POST", fmt.Sprintf("%s/domains/%s/records", url, d.domain), bytes.NewBuffer(body))
 	if errNR != nil {
-		return nil, errNR
+		return nil, fmt.Errorf("%s: %s", name, errNR.Error())
 	}
 
 	res, errDo := d.c.Do(req)
 	if errDo != nil {
-		return nil, errDo
+		return nil, fmt.Errorf("%s: %s", name, errDo.Error())
 	}
 
 	defer res.Body.Close()
 
 	if !misc.Success(res.StatusCode) {
-		return nil, ErrorRequset
+		return nil, fmt.Errorf("%s: %s", name, ErrorRequset.Error())
 	}
 
 	var resRecord domainRecord
 	errDecode := json.NewDecoder(res.Body).Decode(&resRecord)
 	if errDecode != nil {
-		return nil, errDecode
+		return nil, fmt.Errorf("%s: %s", name, errDecode.Error())
 	}
 
 	return &resRecord.Record, nil
@@ -118,29 +120,29 @@ func (d *DigitalOcean) CreateRecord(record Record) (*Record, error) {
 func (d *DigitalOcean) UpdateRecord(record Record) (*Record, error) {
 	body, errMarsh := json.Marshal(record)
 	if errMarsh != nil {
-		return nil, errMarsh
+		return nil, fmt.Errorf("%s: %s", name, errMarsh.Error())
 	}
 
 	req, errNR := d.prepareRequest("PUT", fmt.Sprintf("%s/domains/%s/records/%d", url, d.domain, record.ID), bytes.NewBuffer(body))
 	if errNR != nil {
-		return nil, errNR
+		return nil, fmt.Errorf("%s: %s", name, errNR.Error())
 	}
 
 	res, errDo := d.c.Do(req)
 	if errDo != nil {
-		return nil, errDo
+		return nil, fmt.Errorf("%s: %s", name, errDo.Error())
 	}
 
 	defer res.Body.Close()
 
 	if !misc.Success(res.StatusCode) {
-		return nil, ErrorRequset
+		return nil, fmt.Errorf("%s: %s", name, ErrorRequset.Error())
 	}
 
 	var resRecord domainRecord
 	errDecode := json.NewDecoder(res.Body).Decode(&resRecord)
 	if errDecode != nil {
-		return nil, errDecode
+		return nil, fmt.Errorf("%s: %s", name, errDecode.Error())
 	}
 
 	return &resRecord.Record, nil

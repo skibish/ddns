@@ -6,10 +6,11 @@ import (
 	"os"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/skibish/ddns/conf"
 	"github.com/skibish/ddns/do"
 	"github.com/skibish/ddns/ipprovider"
+	"github.com/skibish/ddns/notifier"
 )
 
 var (
@@ -28,7 +29,10 @@ var (
 var currentIP string
 
 func init() {
-	log.SetFormatter(&log.TextFormatter{})
+	log.SetFormatter(&log.TextFormatter{
+		DisableColors: true,
+	})
+	log.SetLevel(log.DebugLevel)
 	log.SetOutput(os.Stdout)
 }
 
@@ -40,6 +44,16 @@ func main() {
 	cf, errConf = conf.NewConfiguration(*confFile)
 	if errConf != nil {
 		log.Fatal(errConf.Error())
+	}
+
+	// try to register all provided hooks
+	for k, v := range cf.Notify {
+		hook, errGet := notifier.GetHook(k, v)
+		if errGet != nil {
+			log.Debug(errGet)
+			continue
+		}
+		log.AddHook(hook)
 	}
 
 	// setup http client
@@ -142,7 +156,7 @@ func syncRecords(cf *conf.Configuration, allRecords []do.Record) error {
 // checkAndUpdate check for new IP and if it has been changed,
 // trigger the update of the DNS records
 func checkAndUpdate(cf *conf.Configuration, getIP ipprovider.FGetIP) error {
-	log.Info("IP check")
+	log.Debug("IP check")
 	newIP := getIP()
 
 	if currentIP != newIP {

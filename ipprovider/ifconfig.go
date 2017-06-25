@@ -31,19 +31,19 @@ func newIfConfig(c *http.Client) *Ifconfig {
 func (i *Ifconfig) GetIP() (string, error) {
 	resp, errGet := i.c.Get(i.url)
 	if errGet != nil {
-		return "", errGet
+		return "", fmt.Errorf("%s: %s", ifconfigName, errGet.Error())
 	}
 
 	defer resp.Body.Close()
 
 	if !misc.Success(resp.StatusCode) {
-		return "", fmt.Errorf("Status code is not in success range: %d", resp.StatusCode)
+		return "", fmt.Errorf("%s: Status code is not in success range: %d", ifconfigName, resp.StatusCode)
 	}
 
 	var r ifconfigResponse
 	errDecode := json.NewDecoder(resp.Body).Decode(&r)
 	if errDecode != nil {
-		return "", errDecode
+		return "", fmt.Errorf("%s: %s", ifconfigName, errDecode.Error())
 	}
 
 	return r.IP, nil
