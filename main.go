@@ -49,7 +49,7 @@ func main() {
 	for k, v := range cf.Notify {
 		hook, errGet := notifier.GetHook(k, v)
 		if errGet != nil {
-			log.Println(errGet)
+			log.Debug(errGet)
 			continue
 		}
 		log.AddHook(hook)
