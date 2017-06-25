@@ -4,9 +4,9 @@
 	"GodepVersion": "v79",
 	"Deps": [
 		{
-			"ImportPath": "github.com/Sirupsen/logrus",
-			"Comment": "v0.11.4-2-g1deb2db",
-			"Rev": "1deb2db2a6fff8a35532079061b903c3a25eed52"
+			"ImportPath": "github.com/sirupsen/logrus",
+			"Comment": "v1.0.0-2-g3d4380f",
+			"Rev": "3d4380f53a34dcdc95f0c1db702615992b38d9a4"
 		},
 		{
 			"ImportPath": "golang.org/x/sys/unix",
