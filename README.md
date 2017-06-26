@@ -68,7 +68,7 @@ records:              # Records of the domain to update
     name: home
 notify:               # Optional notifiers
   smtp:
-    read: bellow
+    read: below
 ```
 
 ### Notifications
@@ -84,7 +84,7 @@ notify:
     # ...configuration
 ```
 
-Currently supported notifications are listed bellow:
+Currently supported notifications are listed below:
 
 **SMTP**
 
