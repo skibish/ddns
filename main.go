@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"flag"
+	"html/template"
 	"net/http"
 	"os"
 	"time"
@@ -86,7 +88,7 @@ func main() {
 
 	// do initial sync of records
 	var errSync error
-	errSync = syncRecords(storage, allRecords)
+	errSync = syncRecords(storage, cf, allRecords)
 	if errSync != nil {
 		log.Fatal(errSync.Error())
 	}
@@ -99,7 +101,7 @@ func main() {
 		for {
 			select {
 			case <-periodC:
-				errCheck := checkAndUpdate(storage, ipprovider.GetIP)
+				errCheck := checkAndUpdate(storage, cf, ipprovider.GetIP)
 				if errCheck != nil {
 					log.Errorf("Failed to update: %s", errCheck.Error())
 				}
@@ -113,7 +115,7 @@ func main() {
 
 // syncRecords perform initial sync between what we provided
 // in configuration and what already exist in DNS records
-func syncRecords(storage *conf.Configuration, allRecords []do.Record) error {
+func syncRecords(storage *conf.Configuration, cf *conf.Configuration, allRecords []do.Record) error {
 	cRec := len(storage.Records)
 	cAllRec := len(allRecords)
 	for i := 0; i < cRec; i++ {
@@ -131,7 +133,20 @@ func syncRecords(storage *conf.Configuration, allRecords []do.Record) error {
 		// if there was no match, we should create new DNS record
 		// and updatee current configuration
 		if storage.Records[i].ID == 0 {
-			storage.Records[i].Data = currentIP
+			// if there is not template in configuration, set current IP as data,
+			// otherwise parse data and fill template with provided params
+			if cf.Records[i].Data == "" {
+				storage.Records[i].Data = currentIP
+			} else {
+				storage.Params["IP"] = currentIP
+				t := template.Must(template.New("t1").Parse(cf.Records[i].Data))
+				buf := new(bytes.Buffer)
+				errExec := t.Execute(buf, storage.Params)
+				if errExec != nil {
+					return errExec
+				}
+				storage.Records[i].Data = buf.String()
+			}
 
 			newR, errCreate := digio.CreateRecord(storage.Records[i])
 			if errCreate != nil {
@@ -143,7 +158,18 @@ func syncRecords(storage *conf.Configuration, allRecords []do.Record) error {
 
 		// if IPs are different, update record
 		if storage.Records[i].Data != currentIP {
-			storage.Records[i].Data = currentIP
+			if cf.Records[i].Data == "" {
+				storage.Records[i].Data = currentIP
+			} else {
+				storage.Params["IP"] = currentIP
+				t := template.Must(template.New("t1").Parse(cf.Records[i].Data))
+				buf := new(bytes.Buffer)
+				errExec := t.Execute(buf, storage.Params)
+				if errExec != nil {
+					return errExec
+				}
+				storage.Records[i].Data = buf.String()
+			}
 
 			newR, errUpdate := digio.UpdateRecord(storage.Records[i])
 			if errUpdate != nil {
@@ -159,7 +185,7 @@ func syncRecords(storage *conf.Configuration, allRecords []do.Record) error {
 
 // checkAndUpdate check for new IP and if it has been changed,
 // trigger the update of the DNS records
-func checkAndUpdate(storage *conf.Configuration, getIP ipprovider.FGetIP) error {
+func checkAndUpdate(storage *conf.Configuration, cf *conf.Configuration, getIP ipprovider.FGetIP) error {
 	log.Debug("IP check")
 	newIP := getIP()
 
@@ -169,7 +195,18 @@ func checkAndUpdate(storage *conf.Configuration, getIP ipprovider.FGetIP) error 
 
 		cRec := len(storage.Records)
 		for i := 0; i < cRec; i++ {
-			storage.Records[i].Data = currentIP
+			if cf.Records[i].Data == "" {
+				storage.Records[i].Data = currentIP
+			} else {
+				storage.Params["IP"] = currentIP
+				t := template.Must(template.New("t1").Parse(cf.Records[i].Data))
+				buf := new(bytes.Buffer)
+				errExec := t.Execute(buf, storage.Params)
+				if errExec != nil {
+					return errExec
+				}
+				storage.Records[i].Data = buf.String()
+			}
 
 			newR, errUpdate := digio.UpdateRecord(storage.Records[i])
 			if errUpdate != nil {
