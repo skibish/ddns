@@ -16,6 +16,7 @@ import (
 var (
 	digio   do.DigitalOceanInterface
 	cf      *conf.Configuration
+	storage *conf.Configuration
 	periodC <-chan time.Time
 )
 
@@ -34,6 +35,9 @@ func init() {
 	})
 	log.SetLevel(log.DebugLevel)
 	log.SetOutput(os.Stdout)
+
+	// initialize storage
+	storage = &conf.Configuration{}
 }
 
 func main() {
@@ -82,7 +86,7 @@ func main() {
 
 	// do initial sync of records
 	var errSync error
-	errSync = syncRecords(cf, allRecords)
+	errSync = syncRecords(storage, allRecords)
 	if errSync != nil {
 		log.Fatal(errSync.Error())
 	}
@@ -90,63 +94,63 @@ func main() {
 	periodC = time.NewTicker(*checkPeriod).C
 
 	// start main proceess
-	go func(cf *conf.Configuration) {
+	go func(storage *conf.Configuration) {
 		// for defined period of time, perform IP check
 		for {
 			select {
 			case <-periodC:
-				errCheck := checkAndUpdate(cf, ipprovider.GetIP)
+				errCheck := checkAndUpdate(storage, ipprovider.GetIP)
 				if errCheck != nil {
 					log.Errorf("Failed to update: %s", errCheck.Error())
 				}
 			}
 		}
 
-	}(cf)
+	}(storage)
 
 	select {}
 }
 
 // syncRecords perform initial sync between what we provided
 // in configuration and what already exist in DNS records
-func syncRecords(cf *conf.Configuration, allRecords []do.Record) error {
-	cRec := len(cf.Records)
+func syncRecords(storage *conf.Configuration, allRecords []do.Record) error {
+	cRec := len(storage.Records)
 	cAllRec := len(allRecords)
 	for i := 0; i < cRec; i++ {
 		for j := 0; j < cAllRec; j++ {
 
 			// we are only interested in those who have full match
 			// by `type AND name`
-			if cf.Records[i].Type == allRecords[j].Type &&
-				cf.Records[i].Name == allRecords[j].Name {
-				cf.Records[i] = allRecords[j]
+			if storage.Records[i].Type == allRecords[j].Type &&
+				storage.Records[i].Name == allRecords[j].Name {
+				storage.Records[i] = allRecords[j]
 				break
 			}
 		}
 
 		// if there was no match, we should create new DNS record
 		// and updatee current configuration
-		if cf.Records[i].ID == 0 {
-			cf.Records[i].Data = currentIP
+		if storage.Records[i].ID == 0 {
+			storage.Records[i].Data = currentIP
 
-			newR, errCreate := digio.CreateRecord(cf.Records[i])
+			newR, errCreate := digio.CreateRecord(storage.Records[i])
 			if errCreate != nil {
 				return errCreate
 			}
 
-			cf.Records[i] = *newR
+			storage.Records[i] = *newR
 		}
 
 		// if IPs are different, update record
-		if cf.Records[i].Data != currentIP {
-			cf.Records[i].Data = currentIP
+		if storage.Records[i].Data != currentIP {
+			storage.Records[i].Data = currentIP
 
-			newR, errUpdate := digio.UpdateRecord(cf.Records[i])
+			newR, errUpdate := digio.UpdateRecord(storage.Records[i])
 			if errUpdate != nil {
 				return errUpdate
 			}
 
-			cf.Records[i] = *newR
+			storage.Records[i] = *newR
 		}
 	}
 
@@ -155,7 +159,7 @@ func syncRecords(cf *conf.Configuration, allRecords []do.Record) error {
 
 // checkAndUpdate check for new IP and if it has been changed,
 // trigger the update of the DNS records
-func checkAndUpdate(cf *conf.Configuration, getIP ipprovider.FGetIP) error {
+func checkAndUpdate(storage *conf.Configuration, getIP ipprovider.FGetIP) error {
 	log.Debug("IP check")
 	newIP := getIP()
 
@@ -163,16 +167,16 @@ func checkAndUpdate(cf *conf.Configuration, getIP ipprovider.FGetIP) error {
 		log.Infof("IP has changed from %q to %q", currentIP, newIP)
 		currentIP = newIP
 
-		cRec := len(cf.Records)
+		cRec := len(storage.Records)
 		for i := 0; i < cRec; i++ {
-			cf.Records[i].Data = currentIP
+			storage.Records[i].Data = currentIP
 
-			newR, errUpdate := digio.UpdateRecord(cf.Records[i])
+			newR, errUpdate := digio.UpdateRecord(storage.Records[i])
 			if errUpdate != nil {
 				return errUpdate
 			}
 
-			cf.Records[i] = *newR
+			storage.Records[i] = *newR
 		}
 	}
 
