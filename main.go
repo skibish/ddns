@@ -50,7 +50,7 @@ func main() {
 	for k, v := range cf.Notify {
 		hook, errGet := notifier.GetHook(k, v)
 		if errGet != nil {
-			log.Debug(errGet)
+			log.Debugf("Notifier %q not added: %s", k, errGet.Error())
 			continue
 		}
 		log.AddHook(hook)
