@@ -4,9 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-
-	log "github.com/sirupsen/logrus"
-
+	"log"
 	"testing"
 
 	"github.com/skibish/ddns/conf"
@@ -32,11 +30,29 @@ func (t TestDO) UpdateRecord(record do.Record) (*do.Record, error) {
 func TestSyncRecordsCreateNew(t *testing.T) {
 	doT := struct{ TestDO }{}
 	doT.createRecord = func(record do.Record) (*do.Record, error) {
+		if record.Type == "A" {
+			return &do.Record{
+				ID:   123,
+				Type: "A",
+				Name: "test",
+				Data: "127.0.0.1",
+			}, nil
+		}
+
 		return &do.Record{
-			ID:   123,
-			Type: "A",
-			Name: "test",
-			Data: "127.0.0.1",
+			ID:   124,
+			Type: "TXT",
+			Name: "neo",
+			Data: "127.0.0.1 and text",
+		}, nil
+	}
+
+	doT.updateRecord = func(record do.Record) (*do.Record, error) {
+		return &do.Record{
+			ID:   124,
+			Type: "TXT",
+			Name: "neo",
+			Data: "127.0.0.1 and text",
 		}, nil
 	}
 
@@ -45,8 +61,14 @@ func TestSyncRecordsCreateNew(t *testing.T) {
 	cf := &conf.Configuration{
 		Records: []do.Record{
 			{Type: "A", Name: "test"},
+			{Type: "TXT", Name: "neo", Data: "{{.IP}} and text"},
 		},
 	}
+
+	cf.Params = map[string]string{}
+
+	storage := &conf.Configuration{}
+	*storage = *cf
 
 	allRecords := []do.Record{
 		{Type: "A", Name: "test"},
@@ -55,14 +77,18 @@ func TestSyncRecordsCreateNew(t *testing.T) {
 	currentIP = "127.0.0.1"
 
 	var errSync error
-	errSync = syncRecords(cf, allRecords)
+	errSync = syncRecords(storage, cf, allRecords)
 	if errSync != nil {
 		t.Error(errSync)
 		return
 	}
 
-	if cf.Records[0].Data != "127.0.0.1" {
-		t.Error("IPs should be the same", cf.Records[0].Data)
+	if storage.Records[0].Data != "127.0.0.1" {
+		t.Error("IPs should be the same", storage.Records[0].Data)
+		return
+	}
+	if storage.Records[1].Data != "127.0.0.1 and text" {
+		t.Error("IPs should be the same", storage.Records[1].Data)
 		return
 	}
 }
@@ -88,7 +114,7 @@ func TestSyncRecordsCreateError(t *testing.T) {
 	currentIP = "127.0.0.1"
 
 	var errSync error
-	errSync = syncRecords(cf, allRecords)
+	errSync = syncRecords(cf, cf, allRecords)
 	if errSync == nil {
 		t.Error("Should be error, but everything is OK.")
 		return
@@ -121,7 +147,7 @@ func TestSyncRecordsUpdateRecord(t *testing.T) {
 	currentIP = "127.0.0.1"
 
 	var errSync error
-	errSync = syncRecords(cf, allRecords)
+	errSync = syncRecords(cf, cf, allRecords)
 	if errSync != nil {
 		t.Error(errSync)
 		return
@@ -159,7 +185,7 @@ func TestSyncRecordsUpdateError(t *testing.T) {
 	currentIP = "127.0.0.1"
 
 	var errSync error
-	errSync = syncRecords(cf, allRecords)
+	errSync = syncRecords(cf, cf, allRecords)
 	if errSync == nil {
 		t.Error("Should be error, but everything is OK.")
 		return
@@ -180,7 +206,7 @@ func TestCheckAndUpdateOnlyCheck(t *testing.T) {
 	}
 
 	var errCheck error
-	errCheck = checkAndUpdate(cf, tf)
+	errCheck = checkAndUpdate(cf, cf, tf)
 	if errCheck != nil {
 		t.Error(errCheck)
 		return
@@ -213,11 +239,18 @@ func TestCheckAndUpdateOnlyUpdate(t *testing.T) {
 	cf := &conf.Configuration{
 		Records: []do.Record{
 			{Type: "A", Name: "test"},
+			{Type: "TXT", Name: "test", Data: "{{.IP}} is {{.foo}}"},
 		},
 	}
 
+	cf.Params = map[string]string{}
+	cf.Params["foo"] = "bar"
+
+	storage = &conf.Configuration{}
+	*storage = *cf
+
 	var errUpdate error
-	errUpdate = checkAndUpdate(cf, tf)
+	errUpdate = checkAndUpdate(storage, cf, tf)
 	if errUpdate != nil {
 		t.Error(errUpdate)
 		return
@@ -249,7 +282,7 @@ func TestCheckAndUpdateError(t *testing.T) {
 	}
 
 	var errUpdate error
-	errUpdate = checkAndUpdate(cf, tf)
+	errUpdate = checkAndUpdate(cf, cf, tf)
 	if errUpdate == nil {
 		t.Error("Should be error, but everything is OK")
 		return

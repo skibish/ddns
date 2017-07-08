@@ -59,14 +59,19 @@ In your domain name provider configuration point domain to Digital Ocean NS reco
 
 Configuration should be in the following format:
 ```yaml
-token: AMAZING TOKEN  # Digital Ocean token
-domain: example.com   # Domain to update
-records:              # Records of the domain to update
-  - type: A           # Record type
-    name: www         # Record name
-  - type: A
-    name: home
-notify:               # Optional notifiers
+token: "AMAZING TOKEN"                          # Digital Ocean token
+domain: "example.com"                           # Domain to update
+records:                                        # Records of the domain to update
+  - type: "A"                                   # Record type
+    name: "www"                                 # Record name
+  - type: "TXT"
+    name: "demo"
+    data: "My IP is {{.IP}} and I am {{.mood}}" # "data" key is optional. You can write here
+                                                # what you want and reference values from "params".
+                                                # Key "IP" is reserved.
+params:
+  mood: "cool"
+notify:                                         # Optional notifiers
   smtp:
     read: below
 ```
@@ -96,4 +101,5 @@ smtp:
   port: "22"
   to: "foo@foo.com"
   subject: "My DDNS sending me a message"
+  secure: true # Optional flag. Set it, if you will send emails with SSL
 ```

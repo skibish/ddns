@@ -16,6 +16,7 @@ type Configuration struct {
 	Domain  string                 `yaml:"domain"`
 	Records []do.Record            `yaml:"records"`
 	Notify  map[string]interface{} `yaml:"notify"`
+	Params  map[string]string      `yaml:"params"`
 }
 
 // valid checks that provided configuration is valid
@@ -49,6 +50,10 @@ func NewConfiguration(path string) (*Configuration, error) {
 	errValid := cf.valid()
 	if errValid != nil {
 		return nil, errValid
+	}
+
+	if cf.Params == nil {
+		cf.Params = map[string]string{}
 	}
 
 	return &cf, nil
