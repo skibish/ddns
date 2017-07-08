@@ -51,6 +51,7 @@ func main() {
 	if errConf != nil {
 		log.Fatal(errConf.Error())
 	}
+	*storage = *cf
 
 	// try to register all provided hooks
 	for k, v := range cf.Notify {
