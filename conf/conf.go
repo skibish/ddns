@@ -52,7 +52,9 @@ func NewConfiguration(path string) (*Configuration, error) {
 		return nil, errValid
 	}
 
-	cf.Params = map[string]string{}
+	if cf.Params == nil {
+		cf.Params = map[string]string{}
+	}
 
 	return &cf, nil
 }
