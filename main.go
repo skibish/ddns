@@ -136,17 +136,9 @@ func syncRecords(storage *conf.Configuration, cf *conf.Configuration, allRecords
 		if storage.Records[i].ID == 0 {
 			// if there is not template in configuration, set current IP as data,
 			// otherwise parse data and fill template with provided params
-			if cf.Records[i].Data == "" {
-				storage.Records[i].Data = currentIP
-			} else {
-				storage.Params["IP"] = currentIP
-				t := template.Must(template.New("t1").Parse(cf.Records[i].Data))
-				buf := new(bytes.Buffer)
-				errExec := t.Execute(buf, storage.Params)
-				if errExec != nil {
-					return errExec
-				}
-				storage.Records[i].Data = buf.String()
+			errUpdStorage := updateStorage(storage.Records[i], cf.Records[i], storage.Params)
+			if errUpdStorage != nil {
+				return errUpdStorage
 			}
 
 			newR, errCreate := digio.CreateRecord(storage.Records[i])
@@ -159,17 +151,9 @@ func syncRecords(storage *conf.Configuration, cf *conf.Configuration, allRecords
 
 		// if IPs are different, update record
 		if storage.Records[i].Data != currentIP {
-			if cf.Records[i].Data == "" {
-				storage.Records[i].Data = currentIP
-			} else {
-				storage.Params["IP"] = currentIP
-				t := template.Must(template.New("t1").Parse(cf.Records[i].Data))
-				buf := new(bytes.Buffer)
-				errExec := t.Execute(buf, storage.Params)
-				if errExec != nil {
-					return errExec
-				}
-				storage.Records[i].Data = buf.String()
+			errUpdStorage := updateStorage(storage.Records[i], cf.Records[i], storage.Params)
+			if errUpdStorage != nil {
+				return errUpdStorage
 			}
 
 			newR, errUpdate := digio.UpdateRecord(storage.Records[i])
@@ -196,17 +180,9 @@ func checkAndUpdate(storage *conf.Configuration, cf *conf.Configuration, getIP i
 
 		cRec := len(storage.Records)
 		for i := 0; i < cRec; i++ {
-			if cf.Records[i].Data == "" {
-				storage.Records[i].Data = currentIP
-			} else {
-				storage.Params["IP"] = currentIP
-				t := template.Must(template.New("t1").Parse(cf.Records[i].Data))
-				buf := new(bytes.Buffer)
-				errExec := t.Execute(buf, storage.Params)
-				if errExec != nil {
-					return errExec
-				}
-				storage.Records[i].Data = buf.String()
+			errUpdStorage := updateStorage(storage.Records[i], cf.Records[i], storage.Params)
+			if errUpdStorage != nil {
+				return errUpdStorage
 			}
 
 			newR, errUpdate := digio.UpdateRecord(storage.Records[i])
@@ -219,4 +195,21 @@ func checkAndUpdate(storage *conf.Configuration, cf *conf.Configuration, getIP i
 	}
 
 	return nil
+}
+
+// updateStorage updates the storage based on data in configuration
+func updateStorage(storageRecord, configRecord do.Record, params map[string]string) (err error) {
+	if configRecord.Data == "" {
+		storageRecord.Data = currentIP
+	} else {
+		params["IP"] = currentIP
+		t := template.Must(template.New("t1").Parse(configRecord.Data))
+		buf := new(bytes.Buffer)
+		err = t.Execute(buf, params)
+		if err != nil {
+			return
+		}
+		storageRecord.Data = buf.String()
+	}
+	return
 }
