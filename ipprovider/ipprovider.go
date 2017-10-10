@@ -1,40 +1,29 @@
 package ipprovider
 
 import (
-	"net/http"
-
 	log "github.com/sirupsen/logrus"
 )
 
-var providers []IPProvider
+// list of providers
+var providers []Provider
 
-var (
-	ifconfigName  = "ifconfig"
-	ipifyName     = "ipify"
-	wtfismyipName = "wtfismyip"
-)
-
-// IPProvider is an interface that should
+// Provider is an interface that should
 // be implemented by all IP providers.
-type IPProvider interface {
+type Provider interface {
 	GetIP() (string, error)
 }
 
-// FGetIP is a GetIP type
-type FGetIP func() string
-
 // Register registers IP providers
-func Register(c *http.Client) {
-	providers = append(providers,
-		newIfConfig(c), newIpify(c), newWtfIsMyIP(c))
+func Register(p ...Provider) {
+	providers = append(providers, p...)
 }
 
 // GetIP return ip from first successful source
 func GetIP() (ip string) {
-	for _, v := range providers {
+	for _, p := range providers {
 		var errGet error
 
-		ip, errGet = v.GetIP()
+		ip, errGet = p.GetIP()
 		if errGet != nil {
 			log.Warn(errGet.Error())
 		}

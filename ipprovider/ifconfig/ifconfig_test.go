@@ -1,4 +1,4 @@
-package ipprovider
+package ifconfig
 
 import (
 	"net/http"
@@ -8,9 +8,10 @@ import (
 
 func TestIfConfigNew(t *testing.T) {
 	expectedURL := "https://ifconfig.co/json"
-	ifc := newIfConfig(&http.Client{})
-	if ifc.url != expectedURL {
-		t.Errorf("URL of ifconfig should be %q, but got %q", expectedURL, ifc.url)
+	ifc := New(&http.Client{})
+	ifcOriginal := ifc.(*ifconfig)
+	if ifcOriginal.url != expectedURL {
+		t.Errorf("URL of ifconfig should be %q, but got %q", expectedURL, ifcOriginal.url)
 		return
 	}
 }
@@ -24,7 +25,7 @@ func TestIfConfigSuccess(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(handler))
 	defer server.Close()
 
-	ifc := &Ifconfig{
+	ifc := &ifconfig{
 		c:   &http.Client{},
 		url: server.URL,
 	}
@@ -50,7 +51,7 @@ func TestIfConfigNotSuccessCode(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(handler))
 	defer server.Close()
 
-	ifc := &Ifconfig{
+	ifc := &ifconfig{
 		c:   &http.Client{},
 		url: server.URL,
 	}
@@ -75,7 +76,7 @@ func TestIfConfigFailedDecode(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(handler))
 	defer server.Close()
 
-	ifc := &Ifconfig{
+	ifc := &ifconfig{
 		c:   &http.Client{},
 		url: server.URL,
 	}
@@ -100,7 +101,7 @@ func TestIfConfigFailedOnGet(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(handler))
 	defer server.Close()
 
-	ifc := &Ifconfig{
+	ifc := &ifconfig{
 		c:   &http.Client{},
 		url: "http://127.0.0.1:1234",
 	}

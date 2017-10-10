@@ -3,34 +3,31 @@ package ipprovider
 import (
 	"bufio"
 	"bytes"
-	"net/http"
-	"net/http/httptest"
+	"errors"
 	"strings"
 	"testing"
 
 	log "github.com/sirupsen/logrus"
 )
 
+type fakeProviderOne struct{}
+
+func (f fakeProviderOne) GetIP() (string, error) {
+	return "", errors.New("No IP found")
+}
+
+type fakeProviderTwo struct{}
+
+func (f fakeProviderTwo) GetIP() (string, error) {
+	return "45.45.45.45", nil
+}
+
 func TestGetIP(t *testing.T) {
 	var b bytes.Buffer
 	bw := bufio.NewWriter(&b)
 	log.SetOutput(bw)
 
-	handler := func(w http.ResponseWriter, r *http.Request) {
-
-		w.Write([]byte(`{
-    "YourFuckingIPAddress": "45.45.45.45",
-    "ip": "45.45.45.45"
-}`))
-	}
-	server := httptest.NewServer(http.HandlerFunc(handler))
-	defer server.Close()
-
-	ch := &http.Client{}
-
-	providers = append(providers,
-		&Ifconfig{c: ch, url: "http://127.0.0.1:1234"},
-		&Ipify{c: ch, url: server.URL})
+	Register(&fakeProviderOne{}, &fakeProviderTwo{})
 
 	ip := GetIP()
 	if ip != "45.45.45.45" {

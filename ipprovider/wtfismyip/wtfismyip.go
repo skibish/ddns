@@ -1,15 +1,19 @@
-package ipprovider
+package wtfismyip
 
 import (
 	"encoding/json"
 	"fmt"
 	"net/http"
 
+	"github.com/skibish/ddns/ipprovider"
+
 	"github.com/skibish/ddns/misc"
 )
 
-// WtfIsMyIP is an abstraction to get IP
-type WtfIsMyIP struct {
+var providerName = "wtfismyip"
+
+// wtfIsMyIP is an abstraction to get IP
+type wtfIsMyIP struct {
 	c   *http.Client
 	url string
 }
@@ -19,31 +23,31 @@ type wtfIsMyIPResponse struct {
 	IP string `json:"YourFuckingIPAddress"`
 }
 
-// newWtfIsMyIP return WtfIsMyIP
-func newWtfIsMyIP(c *http.Client) *WtfIsMyIP {
-	return &WtfIsMyIP{
+// New return wtfIsMyIP
+func New(c *http.Client) ipprovider.Provider {
+	return &wtfIsMyIP{
 		c:   c,
 		url: "https://wtfismyip.com/json",
 	}
 }
 
 // GetIP get IP
-func (i *WtfIsMyIP) GetIP() (string, error) {
+func (i *wtfIsMyIP) GetIP() (string, error) {
 	resp, errGet := i.c.Get(i.url)
 	if errGet != nil {
-		return "", fmt.Errorf("%s: %s", wtfismyipName, errGet.Error())
+		return "", fmt.Errorf("%s: %s", providerName, errGet.Error())
 	}
 
 	defer resp.Body.Close()
 
 	if !misc.Success(resp.StatusCode) {
-		return "", fmt.Errorf("%s: Status code is not in success range: %d", wtfismyipName, resp.StatusCode)
+		return "", fmt.Errorf("%s: Status code is not in success range: %d", providerName, resp.StatusCode)
 	}
 
 	var r wtfIsMyIPResponse
 	errDecode := json.NewDecoder(resp.Body).Decode(&r)
 	if errDecode != nil {
-		return "", fmt.Errorf("%s: %s", wtfismyipName, errDecode.Error())
+		return "", fmt.Errorf("%s: %s", providerName, errDecode.Error())
 	}
 
 	return r.IP, nil

@@ -1,4 +1,4 @@
-package ipprovider
+package ipify
 
 import (
 	"net/http"
@@ -6,36 +6,31 @@ import (
 	"testing"
 )
 
-func TestWtfIsMyIPNew(t *testing.T) {
-	expectedURL := "https://wtfismyip.com/json"
-	wti := newWtfIsMyIP(&http.Client{})
-	if wti.url != expectedURL {
-		t.Errorf("URL of wtionfig should be %q, but got %q", expectedURL, wti.url)
+func TestIpifyNew(t *testing.T) {
+	expectedURL := "https://api.ipify.org/?format=json"
+	ipf := New(&http.Client{})
+	ipfOriginal := ipf.(*ipify)
+	if ipfOriginal.url != expectedURL {
+		t.Errorf("URL of ipfonfig should be %q, but got %q", expectedURL, ipfOriginal.url)
 		return
 	}
 }
 
-func TestWtfIsMyIPSuccess(t *testing.T) {
+func TestIpifySuccess(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 
-		w.Write([]byte(`{
-    "YourFuckingHostname": "45.45.45.45",
-    "YourFuckingIPAddress": "45.45.45.45",
-    "YourFuckingISP": "SIA Awesomnes",
-    "YourFuckingLocation": "Awesome street",
-    "YourFuckingTorExit": "false"
-}`))
+		w.Write([]byte(`{"ip": "45.45.45.45"}`))
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(handler))
 	defer server.Close()
 
-	wti := &WtfIsMyIP{
+	ipf := &ipify{
 		c:   &http.Client{},
 		url: server.URL,
 	}
 
-	ip, errGet := wti.GetIP()
+	ip, errGet := ipf.GetIP()
 	if errGet != nil {
 		t.Errorf("Got error: %s", errGet.Error())
 		return
@@ -47,7 +42,7 @@ func TestWtfIsMyIPSuccess(t *testing.T) {
 	}
 }
 
-func TestWtfIsMyIPNotSuccessCode(t *testing.T) {
+func TestIpifyNotSuccessCode(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 
 		w.WriteHeader(429)
@@ -56,24 +51,24 @@ func TestWtfIsMyIPNotSuccessCode(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(handler))
 	defer server.Close()
 
-	wti := &WtfIsMyIP{
+	ipf := &ipify{
 		c:   &http.Client{},
 		url: server.URL,
 	}
 
-	_, errGet := wti.GetIP()
+	_, errGet := ipf.GetIP()
 	if errGet == nil {
 		t.Errorf("Should be error, but is success")
 		return
 	}
 
-	if errGet.Error() != "wtfismyip: Status code is not in success range: 429" {
+	if errGet.Error() != "ipify: Status code is not in success range: 429" {
 		t.Error("Error was, but not about status code")
 		return
 	}
 }
 
-func TestWtfIsMyIPFailedDecode(t *testing.T) {
+func TestIpifyFailedDecode(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`something wrong`))
 	}
@@ -81,24 +76,24 @@ func TestWtfIsMyIPFailedDecode(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(handler))
 	defer server.Close()
 
-	wti := &WtfIsMyIP{
+	ipf := &ipify{
 		c:   &http.Client{},
 		url: server.URL,
 	}
 
-	_, errGet := wti.GetIP()
+	_, errGet := ipf.GetIP()
 	if errGet == nil {
 		t.Errorf("Should be error, but is success")
 		return
 	}
 
-	if errGet.Error() != "wtfismyip: invalid character 's' looking for beginning of value" {
+	if errGet.Error() != "ipify: invalid character 's' looking for beginning of value" {
 		t.Error("Error was, but not related to parsing")
 		return
 	}
 }
 
-func TestWtfIsMyIPFailedOnGet(t *testing.T) {
+func TestIpifyFailedOnGet(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`something wrong`))
 	}
@@ -106,18 +101,18 @@ func TestWtfIsMyIPFailedOnGet(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(handler))
 	defer server.Close()
 
-	wti := &WtfIsMyIP{
+	ipf := &ipify{
 		c:   &http.Client{},
 		url: "http://127.0.0.1:1234",
 	}
 
-	_, errGet := wti.GetIP()
+	_, errGet := ipf.GetIP()
 	if errGet == nil {
 		t.Errorf("Should be error, but is success")
 		return
 	}
 
-	if errGet.Error() != "wtfismyip: Get http://127.0.0.1:1234: dial tcp 127.0.0.1:1234: getsockopt: connection refused" {
+	if errGet.Error() != "ipify: Get http://127.0.0.1:1234: dial tcp 127.0.0.1:1234: getsockopt: connection refused" {
 		t.Error("Error was, but not related to the request fail")
 		return
 	}

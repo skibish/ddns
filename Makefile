@@ -4,7 +4,7 @@
 .DEFAULT_GOAL := help
 
 test: ## run tests
-	go test -v -cover -race $(go list ./... | grep -v /vendor/)
+	go test -v -cover -race `go list ./... | grep -v /vendor/`
 
 build: ## build binaries for distribution
 	GOOS=linux GOARCH=386 go build -o ddns-Linux-x86_64 .

@@ -8,6 +8,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/skibish/ddns/ipprovider/ifconfig"
+	"github.com/skibish/ddns/ipprovider/ipify"
+	"github.com/skibish/ddns/ipprovider/wtfismyip"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/skibish/ddns/conf"
 	"github.com/skibish/ddns/do"
@@ -71,8 +75,12 @@ func main() {
 	// initialte digital ocean client
 	digio = do.NewDigitalOcean(cf.Domain, cf.Token, hc)
 
-	// register providers
-	ipprovider.Register(hc)
+	// register IP providers
+	ipprovider.Register(
+		ifconfig.New(hc),
+		ipify.New(hc),
+		wtfismyip.New(hc),
+	)
 
 	// get current IP
 	currentIP = ipprovider.GetIP()
@@ -170,7 +178,7 @@ func syncRecords(storage *conf.Configuration, cf *conf.Configuration, allRecords
 
 // checkAndUpdate check for new IP and if it has been changed,
 // trigger the update of the DNS records
-func checkAndUpdate(storage *conf.Configuration, cf *conf.Configuration, getIP ipprovider.FGetIP) error {
+func checkAndUpdate(storage *conf.Configuration, cf *conf.Configuration, getIP func() string) error {
 	log.Debug("IP check")
 	newIP := getIP()
 
