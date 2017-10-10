@@ -27,9 +27,11 @@ func TestGetIP(t *testing.T) {
 	bw := bufio.NewWriter(&b)
 	log.SetOutput(bw)
 
-	Register(&fakeProviderOne{}, &fakeProviderTwo{})
+	i := New()
 
-	ip := GetIP()
+	i.Register(&fakeProviderOne{}, &fakeProviderTwo{})
+
+	ip := i.GetIP()
 	if ip != "45.45.45.45" {
 		t.Error("aaa")
 		return
