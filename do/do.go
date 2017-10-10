@@ -48,8 +48,8 @@ type DigitalOcean struct {
 	domain string
 }
 
-// NewDigitalOcean return instance of DigitalOcean
-func NewDigitalOcean(domain, token string, c *http.Client) *DigitalOcean {
+// New return instance of DigitalOcean
+func New(domain, token string, c *http.Client) *DigitalOcean {
 	return &DigitalOcean{
 		domain: domain,
 		token:  token,

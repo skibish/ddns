@@ -1,4 +1,4 @@
-package main
+package updater
 
 import (
 	"bufio"
@@ -6,6 +6,8 @@ import (
 	"errors"
 	"log"
 	"testing"
+
+	"github.com/skibish/ddns/ipprovider"
 
 	"github.com/skibish/ddns/conf"
 	"github.com/skibish/ddns/do"
@@ -25,6 +27,14 @@ func (t TestDO) CreateRecord(record do.Record) (*do.Record, error) {
 }
 func (t TestDO) UpdateRecord(record do.Record) (*do.Record, error) {
 	return t.updateRecord(record)
+}
+
+type TestProvider struct {
+	getIP func() (string, error)
+}
+
+func (t TestProvider) GetIP() (string, error) {
+	return t.getIP()
 }
 
 func TestSyncRecordsCreateNew(t *testing.T) {
@@ -56,8 +66,6 @@ func TestSyncRecordsCreateNew(t *testing.T) {
 		}, nil
 	}
 
-	digio = doT
-
 	cf := &conf.Configuration{
 		Records: []do.Record{
 			{Type: "A", Name: "test"},
@@ -67,28 +75,31 @@ func TestSyncRecordsCreateNew(t *testing.T) {
 
 	cf.Params = map[string]string{}
 
-	storage := &conf.Configuration{}
-	*storage = *cf
+	u := &Updater{
+		digitalOcean: doT,
+		config:       cf,
+		storage:      cf,
+	}
 
 	allRecords := []do.Record{
 		{Type: "A", Name: "test"},
 	}
 
-	currentIP = "127.0.0.1"
+	u.ip = "127.0.0.1"
 
 	var errSync error
-	errSync = syncRecords(storage, cf, allRecords)
+	errSync = u.syncRecords(allRecords)
 	if errSync != nil {
 		t.Error(errSync)
 		return
 	}
 
-	if storage.Records[0].Data != "127.0.0.1" {
-		t.Error("IPs should be the same", storage.Records[0].Data)
+	if u.storage.Records[0].Data != "127.0.0.1" {
+		t.Error("IPs should be the same", u.storage.Records[0].Data)
 		return
 	}
-	if storage.Records[1].Data != "127.0.0.1 and text" {
-		t.Error("IPs should be the same", storage.Records[1].Data)
+	if u.storage.Records[1].Data != "127.0.0.1 and text" {
+		t.Error("IPs should be the same", u.storage.Records[1].Data)
 		return
 	}
 }
@@ -99,22 +110,26 @@ func TestSyncRecordsCreateError(t *testing.T) {
 		return nil, errors.New("Create error")
 	}
 
-	digio = doT
-
 	cf := &conf.Configuration{
 		Records: []do.Record{
 			{Type: "A", Name: "test"},
 		},
 	}
 
+	u := &Updater{
+		digitalOcean: doT,
+		config:       cf,
+		storage:      cf,
+	}
+
 	allRecords := []do.Record{
 		{Type: "A", Name: "test"},
 	}
 
-	currentIP = "127.0.0.1"
+	u.ip = "127.0.0.1"
 
 	var errSync error
-	errSync = syncRecords(cf, cf, allRecords)
+	errSync = u.syncRecords(allRecords)
 	if errSync == nil {
 		t.Error("Should be error, but everything is OK.")
 		return
@@ -132,22 +147,26 @@ func TestSyncRecordsUpdateRecord(t *testing.T) {
 		}, nil
 	}
 
-	digio = doT
-
 	cf := &conf.Configuration{
 		Records: []do.Record{
 			{Type: "A", Name: "test"},
 		},
 	}
 
+	u := &Updater{
+		digitalOcean: doT,
+		config:       cf,
+		storage:      cf,
+	}
+
 	allRecords := []do.Record{
 		{ID: 123, Type: "A", Name: "test"},
 	}
 
-	currentIP = "127.0.0.1"
+	u.ip = "127.0.0.1"
 
 	var errSync error
-	errSync = syncRecords(cf, cf, allRecords)
+	errSync = u.syncRecords(allRecords)
 	if errSync != nil {
 		t.Error(errSync)
 		return
@@ -170,22 +189,26 @@ func TestSyncRecordsUpdateError(t *testing.T) {
 		return nil, errors.New("Update error")
 	}
 
-	digio = doT
-
 	cf := &conf.Configuration{
 		Records: []do.Record{
 			{Type: "A", Name: "test"},
 		},
 	}
 
+	u := &Updater{
+		digitalOcean: doT,
+		config:       cf,
+		storage:      cf,
+	}
+
 	allRecords := []do.Record{
 		{ID: 123, Type: "A", Name: "test"},
 	}
 
-	currentIP = "127.0.0.1"
+	u.ip = "127.0.0.1"
 
 	var errSync error
-	errSync = syncRecords(cf, cf, allRecords)
+	errSync = u.syncRecords(allRecords)
 	if errSync == nil {
 		t.Error("Should be error, but everything is OK.")
 		return
@@ -193,10 +216,22 @@ func TestSyncRecordsUpdateError(t *testing.T) {
 }
 
 func TestCheckAndUpdateOnlyCheck(t *testing.T) {
-	currentIP = "127.0.0.1"
+	provT := struct{ TestProvider }{}
+	provT.getIP = func() (string, error) {
+		return "127.0.0.3", nil
+	}
 
-	tf := func() string {
-		return "127.0.0.1"
+	p := ipprovider.New()
+	p.Register(provT)
+
+	doT := struct{ TestDO }{}
+	doT.updateRecord = func(record do.Record) (*do.Record, error) {
+		return &do.Record{
+			ID:   124,
+			Type: "TXT",
+			Name: "neo",
+			Data: "127.0.0.1 and text",
+		}, nil
 	}
 
 	cf := &conf.Configuration{
@@ -205,8 +240,17 @@ func TestCheckAndUpdateOnlyCheck(t *testing.T) {
 		},
 	}
 
+	u := &Updater{
+		ipprovider:   p,
+		digitalOcean: doT,
+		config:       cf,
+		storage:      cf,
+	}
+
+	u.ip = "127.0.0.1"
+
 	var errCheck error
-	errCheck = checkAndUpdate(cf, cf, tf)
+	errCheck = u.checkAndUpdate()
 	if errCheck != nil {
 		t.Error(errCheck)
 		return
@@ -229,12 +273,13 @@ func TestCheckAndUpdateOnlyUpdate(t *testing.T) {
 		}, nil
 	}
 
-	digio = doT
-	currentIP = "127.0.0.1"
-
-	tf := func() string {
-		return "127.0.0.3"
+	provT := struct{ TestProvider }{}
+	provT.getIP = func() (string, error) {
+		return "127.0.0.3", nil
 	}
+
+	p := ipprovider.New()
+	p.Register(provT)
 
 	cf := &conf.Configuration{
 		Records: []do.Record{
@@ -246,11 +291,16 @@ func TestCheckAndUpdateOnlyUpdate(t *testing.T) {
 	cf.Params = map[string]string{}
 	cf.Params["foo"] = "bar"
 
-	storage = &conf.Configuration{}
-	*storage = *cf
+	u := &Updater{
+		ipprovider:   p,
+		digitalOcean: doT,
+		config:       cf,
+		storage:      cf,
+		ip:           "127.0.0.1",
+	}
 
 	var errUpdate error
-	errUpdate = checkAndUpdate(storage, cf, tf)
+	errUpdate = u.checkAndUpdate()
 	if errUpdate != nil {
 		t.Error(errUpdate)
 		return
@@ -268,12 +318,13 @@ func TestCheckAndUpdateError(t *testing.T) {
 		return nil, errors.New("Update Error")
 	}
 
-	digio = doT
-	currentIP = "127.0.0.1"
-
-	tf := func() string {
-		return "127.0.0.3"
+	provT := struct{ TestProvider }{}
+	provT.getIP = func() (string, error) {
+		return "127.0.0.3", nil
 	}
+
+	p := ipprovider.New()
+	p.Register(provT)
 
 	cf := &conf.Configuration{
 		Records: []do.Record{
@@ -281,8 +332,16 @@ func TestCheckAndUpdateError(t *testing.T) {
 		},
 	}
 
+	u := &Updater{
+		ipprovider:   p,
+		digitalOcean: doT,
+		config:       cf,
+		storage:      cf,
+		ip:           "127.0.0.1",
+	}
+
 	var errUpdate error
-	errUpdate = checkAndUpdate(cf, cf, tf)
+	errUpdate = u.checkAndUpdate()
 	if errUpdate == nil {
 		t.Error("Should be error, but everything is OK")
 		return

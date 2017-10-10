@@ -44,7 +44,7 @@ func TestGetDomainRecordsSuccess(t *testing.T) {
 
 	url = server.URL
 
-	d := NewDigitalOcean("example.com", "amazingtoken", &http.Client{})
+	d := New("example.com", "amazingtoken", &http.Client{})
 
 	recs, errGet := d.GetDomainRecords()
 	if errGet != nil {
@@ -69,7 +69,7 @@ func TestGetDomainRecordsIncorrectStatusCode(t *testing.T) {
 
 	url = server.URL
 
-	d := NewDigitalOcean("example.com", "amazingtoken", &http.Client{})
+	d := New("example.com", "amazingtoken", &http.Client{})
 
 	_, errGet := d.GetDomainRecords()
 	if errGet == nil {
@@ -88,7 +88,7 @@ func TestGetDomainRecordsParseError(t *testing.T) {
 
 	url = server.URL
 
-	d := NewDigitalOcean("example.com", "amazingtoken", &http.Client{})
+	d := New("example.com", "amazingtoken", &http.Client{})
 
 	_, errGet := d.GetDomainRecords()
 	if errGet.Error() != "digitalocean: invalid character 'a' looking for beginning of value" {
@@ -133,7 +133,7 @@ func TestCreateRecordSuccess(t *testing.T) {
 
 	url = server.URL
 
-	d := NewDigitalOcean("example.com", "amazingtoken", &http.Client{})
+	d := New("example.com", "amazingtoken", &http.Client{})
 
 	recs, errGet := d.CreateRecord(Record{})
 	if errGet != nil {
@@ -158,7 +158,7 @@ func TestCreateRecordIncorrectStatusCode(t *testing.T) {
 
 	url = server.URL
 
-	d := NewDigitalOcean("example.com", "amazingtoken", &http.Client{})
+	d := New("example.com", "amazingtoken", &http.Client{})
 
 	_, errGet := d.CreateRecord(Record{})
 	if errGet == nil {
@@ -177,7 +177,7 @@ func TestCreateRecordParseError(t *testing.T) {
 
 	url = server.URL
 
-	d := NewDigitalOcean("example.com", "amazingtoken", &http.Client{})
+	d := New("example.com", "amazingtoken", &http.Client{})
 
 	_, errGet := d.CreateRecord(Record{})
 	if errGet.Error() != "digitalocean: invalid character 'a' looking for beginning of value" {
@@ -222,7 +222,7 @@ func TestUpdateRecordSuccess(t *testing.T) {
 
 	url = server.URL
 
-	d := NewDigitalOcean("example.com", "amazingtoken", &http.Client{})
+	d := New("example.com", "amazingtoken", &http.Client{})
 
 	recs, errGet := d.UpdateRecord(Record{})
 	if errGet != nil {
@@ -247,7 +247,7 @@ func TestUpdateRecordIncorrectStatusCode(t *testing.T) {
 
 	url = server.URL
 
-	d := NewDigitalOcean("example.com", "amazingtoken", &http.Client{})
+	d := New("example.com", "amazingtoken", &http.Client{})
 
 	_, errGet := d.UpdateRecord(Record{})
 	if errGet == nil {
@@ -266,7 +266,7 @@ func TestUpdateRecordParseError(t *testing.T) {
 
 	url = server.URL
 
-	d := NewDigitalOcean("example.com", "amazingtoken", &http.Client{})
+	d := New("example.com", "amazingtoken", &http.Client{})
 
 	_, errGet := d.UpdateRecord(Record{})
 	if errGet.Error() != "digitalocean: invalid character 'a' looking for beginning of value" {

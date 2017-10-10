@@ -4,23 +4,30 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// list of providers
-var providers []Provider
-
 // Provider is an interface that should
 // be implemented by all IP providers.
 type Provider interface {
 	GetIP() (string, error)
 }
 
+// IPProvider struct
+type IPProvider struct {
+	providers []Provider
+}
+
+// New return new IPProvider instance
+func New() *IPProvider {
+	return &IPProvider{}
+}
+
 // Register registers IP providers
-func Register(p ...Provider) {
-	providers = append(providers, p...)
+func (i *IPProvider) Register(p ...Provider) {
+	i.providers = append(i.providers, p...)
 }
 
 // GetIP return ip from first successful source
-func GetIP() (ip string) {
-	for _, p := range providers {
+func (i *IPProvider) GetIP() (ip string) {
+	for _, p := range i.providers {
 		var errGet error
 
 		ip, errGet = p.GetIP()
