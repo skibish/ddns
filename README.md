@@ -5,6 +5,8 @@
 
 Personal DDNS client with [Digital Ocean Networking](https://www.digitalocean.com/products/networking/) DNS as backend.
 
+*[Read about it on Medium](https://medium.com/@kibish/your-personal-ddns-4ef7bbb189de)*
+
 ## Motivation
 
 We have services like [DynDNS](http://dyn.com/dns/), [No-IP](http://www.noip.com/) to access PCs remotely. But do we need them?
