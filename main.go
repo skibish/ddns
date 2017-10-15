@@ -65,7 +65,12 @@ func main() {
 	)
 
 	// Initialize and start updater
-	errStart := updater.New(c, provider, cf, *checkPeriod).Start()
+	upd, errUpdater := updater.New(c, provider, cf, *checkPeriod)
+	if errUpdater != nil {
+		log.Fatal(errUpdater)
+	}
+
+	errStart := upd.Start()
 	if errStart != nil {
 		log.Fatal(errStart)
 	}

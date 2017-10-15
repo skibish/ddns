@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/mitchellh/copystructure"
 	"github.com/skibish/ddns/conf"
 
 	log "github.com/sirupsen/logrus"
@@ -25,17 +26,28 @@ type Updater struct {
 }
 
 // New return new Updater.
-func New(hc *http.Client, ipprovider *ipprovider.IPProvider, cfg *conf.Configuration, updateTick time.Duration) *Updater {
+func New(hc *http.Client, ipprovider *ipprovider.IPProvider, cfg *conf.Configuration, updateTick time.Duration) (u *Updater, err error) {
 
-	u := &Updater{
+	u = &Updater{
 		updateTick:   updateTick,
 		digitalOcean: do.New(cfg.Domain, cfg.Token, hc),
 		ipprovider:   ipprovider,
-		storage:      cfg, // configuration and storage have same structure for simplicity
-		config:       cfg,
 	}
 
-	return u
+	// configuration and storage have same structure for simplicity
+	copyForStorage, err := copystructure.Copy(cfg)
+	if err != nil {
+		return
+	}
+
+	var ok bool
+	u.storage, ok = copyForStorage.(*conf.Configuration)
+	if !ok {
+		return nil, errors.New("Failed to convert interface{} to conf.Configuration")
+	}
+	u.config = cfg
+
+	return
 }
 
 // Start starts the updater process goroutine
@@ -101,7 +113,7 @@ func (u *Updater) syncRecords(allRecords []do.Record) error {
 		if u.storage.Records[i].ID == 0 {
 			// if there is not template in configuration, set current IP as data,
 			// otherwise parse data and fill template with provided params
-			errUpdStorage := u.updateStorage(u.storage.Records[i], u.config.Records[i], u.storage.Params)
+			errUpdStorage := u.updateStorage(&u.storage.Records[i], &u.config.Records[i], u.config.Params)
 			if errUpdStorage != nil {
 				return errUpdStorage
 			}
@@ -116,7 +128,7 @@ func (u *Updater) syncRecords(allRecords []do.Record) error {
 
 		// if IPs are different, update record
 		if u.storage.Records[i].Data != u.ip {
-			errUpdStorage := u.updateStorage(u.storage.Records[i], u.config.Records[i], u.storage.Params)
+			errUpdStorage := u.updateStorage(&u.storage.Records[i], &u.config.Records[i], u.config.Params)
 			if errUpdStorage != nil {
 				return errUpdStorage
 			}
@@ -145,7 +157,7 @@ func (u *Updater) checkAndUpdate() error {
 
 		cRec := len(u.storage.Records)
 		for i := 0; i < cRec; i++ {
-			errUpdStorage := u.updateStorage(u.storage.Records[i], u.config.Records[i], u.storage.Params)
+			errUpdStorage := u.updateStorage(&u.storage.Records[i], &u.config.Records[i], u.storage.Params)
 			if errUpdStorage != nil {
 				return errUpdStorage
 			}
@@ -163,7 +175,7 @@ func (u *Updater) checkAndUpdate() error {
 }
 
 // updateStorage updates the storage based on data in configuration
-func (u *Updater) updateStorage(storageRecord, configRecord do.Record, params map[string]string) (err error) {
+func (u *Updater) updateStorage(storageRecord, configRecord *do.Record, params map[string]string) (err error) {
 	if configRecord.Data == "" {
 		storageRecord.Data = u.ip
 	} else {

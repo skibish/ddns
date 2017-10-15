@@ -2,6 +2,18 @@
 
 
 [[projects]]
+  branch = "master"
+  name = "github.com/mitchellh/copystructure"
+  packages = ["."]
+  revision = "d23ffcb85de31694d6ccaa23ccb4a03e55c1303f"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/mitchellh/reflectwalk"
+  packages = ["."]
+  revision = "63d60e9d0dbc60cf9164e6510889b0db6683d98c"
+
+[[projects]]
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   revision = "3d4380f53a34dcdc95f0c1db702615992b38d9a4"
@@ -19,6 +31,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "573b0fe60caf7121d1735a7b81a489560f21a199a2b230238d010aa992aaef8d"
+  inputs-digest = "cdd231d5d8911154b4226e1b9c4ac8b637c5ad302c7af280821a188d9e86256e"
   solver-name = "gps-cdcl"
   solver-version = 1
