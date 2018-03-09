@@ -7,11 +7,19 @@ import (
 )
 
 func TestIfConfigNew(t *testing.T) {
-	expectedURL := "https://ifconfig.co/json"
-	ifc := New(&http.Client{})
+	expectedURL := "https://v4.ifconfig.co/json"
+	ifc := New(&http.Client{}, false)
 	ifcOriginal := ifc.(*ifconfig)
 	if ifcOriginal.url != expectedURL {
 		t.Errorf("URL of ifconfig should be %q, but got %q", expectedURL, ifcOriginal.url)
+		return
+	}
+
+	expectedv6URL := "https://v6.ifconfig.co/json"
+	ifc = New(&http.Client{}, true)
+	ifcOriginal = ifc.(*ifconfig)
+	if ifcOriginal.url != expectedv6URL {
+		t.Errorf("URL of ifconfig should be %q, but got %q", expectedv6URL, ifcOriginal.url)
 		return
 	}
 }
@@ -112,7 +120,7 @@ func TestIfConfigFailedOnGet(t *testing.T) {
 		return
 	}
 
-	if errGet.Error() != "ifconfig: Get http://127.0.0.1:1234: dial tcp 127.0.0.1:1234: getsockopt: connection refused" {
+	if errGet.Error() != "ifconfig: Get http://127.0.0.1:1234: dial tcp 127.0.0.1:1234: connect: connection refused" {
 		t.Errorf("Error was, but not related to the request fail: %v", errGet.Error())
 		return
 	}

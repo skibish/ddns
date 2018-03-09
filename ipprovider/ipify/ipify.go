@@ -23,10 +23,14 @@ type ipifyResponse struct {
 }
 
 // New return Ipify
-func New(c *http.Client) ipprovider.Provider {
+func New(c *http.Client, IPv6 bool) ipprovider.Provider {
+	url := "https://api4.ipify.org/?format=json"
+	if IPv6 {
+		url = "https://api6.ipify.org/?format=json"
+	}
 	return &ipify{
 		c:   c,
-		url: "https://api.ipify.org/?format=json",
+		url: url,
 	}
 }
 

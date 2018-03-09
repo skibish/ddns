@@ -23,10 +23,14 @@ type ifconfigResponse struct {
 }
 
 // New return ifconfig
-func New(c *http.Client) ipprovider.Provider {
+func New(c *http.Client, IPv6 bool) ipprovider.Provider {
+	url := "https://v4.ifconfig.co/json"
+	if IPv6 {
+		url = "https://v6.ifconfig.co/json"
+	}
 	return &ifconfig{
 		c:   c,
-		url: "https://ifconfig.co/json",
+		url: url,
 	}
 }
 

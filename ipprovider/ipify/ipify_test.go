@@ -7,11 +7,19 @@ import (
 )
 
 func TestIpifyNew(t *testing.T) {
-	expectedURL := "https://api.ipify.org/?format=json"
-	ipf := New(&http.Client{})
+	expectedURL := "https://api4.ipify.org/?format=json"
+	ipf := New(&http.Client{}, false)
 	ipfOriginal := ipf.(*ipify)
 	if ipfOriginal.url != expectedURL {
 		t.Errorf("URL of ipfonfig should be %q, but got %q", expectedURL, ipfOriginal.url)
+		return
+	}
+
+	expectedv6URL := "https://api6.ipify.org/?format=json"
+	ipf = New(&http.Client{}, true)
+	ipfOriginal = ipf.(*ipify)
+	if ipfOriginal.url != expectedv6URL {
+		t.Errorf("URL of ipfonfig should be %q, but got %q", expectedv6URL, ipfOriginal.url)
 		return
 	}
 }
@@ -112,7 +120,7 @@ func TestIpifyFailedOnGet(t *testing.T) {
 		return
 	}
 
-	if errGet.Error() != "ipify: Get http://127.0.0.1:1234: dial tcp 127.0.0.1:1234: getsockopt: connection refused" {
+	if errGet.Error() != "ipify: Get http://127.0.0.1:1234: dial tcp 127.0.0.1:1234: connect: connection refused" {
 		t.Error("Error was, but not related to the request fail")
 		return
 	}

@@ -118,7 +118,7 @@ func TestWtfIsMyIPFailedOnGet(t *testing.T) {
 		return
 	}
 
-	if errGet.Error() != "wtfismyip: Get http://127.0.0.1:1234: dial tcp 127.0.0.1:1234: getsockopt: connection refused" {
+	if errGet.Error() != "wtfismyip: Get http://127.0.0.1:1234: dial tcp 127.0.0.1:1234: connect: connection refused" {
 		t.Error("Error was, but not related to the request fail")
 		return
 	}

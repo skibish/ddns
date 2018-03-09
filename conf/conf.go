@@ -14,6 +14,7 @@ import (
 type Configuration struct {
 	Token   string                 `yaml:"token"`
 	Domain  string                 `yaml:"domain"`
+	IPv6    bool                   `yaml:"ipv6"`
 	Records []do.Record            `yaml:"records"`
 	Notify  map[string]interface{} `yaml:"notify"`
 	Params  map[string]string      `yaml:"params"`
