@@ -120,7 +120,7 @@ func TestIfConfigFailedOnGet(t *testing.T) {
 		return
 	}
 
-	if errGet.Error() != "ifconfig: Get http://127.0.0.1:1234: dial tcp 127.0.0.1:1234: connect: connection refused" {
+	if errGet.Error() != "ifconfig: Get http://127.0.0.1:1234: dial tcp 127.0.0.1:1234: getsockopt: connection refused" {
 		t.Errorf("Error was, but not related to the request fail: %v", errGet.Error())
 		return
 	}
