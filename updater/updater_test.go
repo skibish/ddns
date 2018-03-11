@@ -33,6 +33,9 @@ type TestProvider struct {
 	getIP func() (string, error)
 }
 
+func (t TestProvider) ForceIPV6() {
+}
+
 func (t TestProvider) GetIP() (string, error) {
 	return t.getIP()
 }

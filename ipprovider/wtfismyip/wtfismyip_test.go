@@ -7,8 +7,19 @@ import (
 )
 
 func TestWtfIsMyIPNew(t *testing.T) {
-	expectedURL := "https://wtfismyip.com/json"
+	expectedURL := "https://ipv4.wtfismyip.com/json"
 	wti := New(&http.Client{})
+	wtiOriginal := wti.(*wtfIsMyIP)
+	if wtiOriginal.url != expectedURL {
+		t.Errorf("URL of wtionfig should be %q, but got %q", expectedURL, wtiOriginal.url)
+		return
+	}
+}
+
+func TestForceIPV6(t *testing.T) {
+	expectedURL := "https://ipv6.wtfismyip.com/json"
+	wti := New(&http.Client{})
+	wti.ForceIPV6()
 	wtiOriginal := wti.(*wtfIsMyIP)
 	if wtiOriginal.url != expectedURL {
 		t.Errorf("URL of wtionfig should be %q, but got %q", expectedURL, wtiOriginal.url)

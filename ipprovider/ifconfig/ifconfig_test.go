@@ -8,16 +8,19 @@ import (
 
 func TestIfConfigNew(t *testing.T) {
 	expectedURL := "https://v4.ifconfig.co/json"
-	ifc := New(&http.Client{}, false)
+	ifc := New(&http.Client{})
 	ifcOriginal := ifc.(*ifconfig)
 	if ifcOriginal.url != expectedURL {
 		t.Errorf("URL of ifconfig should be %q, but got %q", expectedURL, ifcOriginal.url)
 		return
 	}
+}
 
+func TestForceIPV6(t *testing.T) {
 	expectedv6URL := "https://v6.ifconfig.co/json"
-	ifc = New(&http.Client{}, true)
-	ifcOriginal = ifc.(*ifconfig)
+	ifc := New(&http.Client{})
+	ifc.ForceIPV6()
+	ifcOriginal := ifc.(*ifconfig)
 	if ifcOriginal.url != expectedv6URL {
 		t.Errorf("URL of ifconfig should be %q, but got %q", expectedv6URL, ifcOriginal.url)
 		return

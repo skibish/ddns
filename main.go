@@ -57,21 +57,21 @@ func main() {
 	}
 
 	// initialize new ipprovider and register IP providers
-	var provider *ipprovider.IPProvider
-	if cf.IPv6 {
-		provider = ipprovider.New()
-		provider.Register(
-			ifconfig.New(c, true),
-			ipify.New(c, true),
-		)
-	} else {
-		provider = ipprovider.New()
-		provider.Register(
-			ifconfig.New(c, false),
-			ipify.New(c, false),
-			wtfismyip.New(c),
-		)
+	provider := ipprovider.New()
+
+	providerList := []ipprovider.Provider{
+		ifconfig.New(c),
+		ipify.New(c),
+		wtfismyip.New(c),
 	}
+
+	if cf.ForceIPV6 {
+		for _, p := range providerList {
+			p.ForceIPV6()
+		}
+	}
+
+	provider.Register(providerList...)
 
 	// Initialize and start updater
 	upd, errUpdater := updater.New(c, provider, cf, *checkPeriod)

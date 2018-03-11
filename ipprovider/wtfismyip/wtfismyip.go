@@ -27,8 +27,13 @@ type wtfIsMyIPResponse struct {
 func New(c *http.Client) ipprovider.Provider {
 	return &wtfIsMyIP{
 		c:   c,
-		url: "https://wtfismyip.com/json",
+		url: "https://ipv4.wtfismyip.com/json",
 	}
+}
+
+// ForceIPV6 .
+func (i *wtfIsMyIP) ForceIPV6() {
+	i.url = "https://ipv6.wtfismyip.com/json"
 }
 
 // GetIP get IP

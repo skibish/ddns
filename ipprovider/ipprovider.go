@@ -8,6 +8,7 @@ import (
 // be implemented by all IP providers.
 type Provider interface {
 	GetIP() (string, error)
+	ForceIPV6()
 }
 
 // IPProvider struct
