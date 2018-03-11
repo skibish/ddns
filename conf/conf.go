@@ -12,12 +12,12 @@ import (
 
 // Configuration is a structure of the configuration
 type Configuration struct {
-	Token   string                 `yaml:"token"`
-	Domain  string                 `yaml:"domain"`
-	IPv6    bool                   `yaml:"ipv6"`
-	Records []do.Record            `yaml:"records"`
-	Notify  map[string]interface{} `yaml:"notify"`
-	Params  map[string]string      `yaml:"params"`
+	Token     string                 `yaml:"token"`
+	Domain    string                 `yaml:"domain"`
+	ForceIPV6 bool                   `yaml:"forceIPV6"`
+	Records   []do.Record            `yaml:"records"`
+	Notify    map[string]interface{} `yaml:"notify"`
+	Params    map[string]string      `yaml:"params"`
 }
 
 // valid checks that provided configuration is valid
