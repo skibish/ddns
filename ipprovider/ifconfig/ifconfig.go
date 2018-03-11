@@ -26,8 +26,13 @@ type ifconfigResponse struct {
 func New(c *http.Client) ipprovider.Provider {
 	return &ifconfig{
 		c:   c,
-		url: "https://ifconfig.co/json",
+		url: "https://v4.ifconfig.co/json",
 	}
+}
+
+// ForceIPV6 .
+func (i *ifconfig) ForceIPV6() {
+	i.url = "https://v6.ifconfig.co/json"
 }
 
 // GetIP get ip

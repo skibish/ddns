@@ -7,11 +7,22 @@ import (
 )
 
 func TestIpifyNew(t *testing.T) {
-	expectedURL := "https://api.ipify.org/?format=json"
+	expectedURL := "https://api4.ipify.org/?format=json"
 	ipf := New(&http.Client{})
 	ipfOriginal := ipf.(*ipify)
 	if ipfOriginal.url != expectedURL {
 		t.Errorf("URL of ipfonfig should be %q, but got %q", expectedURL, ipfOriginal.url)
+		return
+	}
+}
+
+func TestForceIPV6(t *testing.T) {
+	expectedv6URL := "https://api6.ipify.org/?format=json"
+	ipf := New(&http.Client{})
+	ipf.ForceIPV6()
+	ipfOriginal := ipf.(*ipify)
+	if ipfOriginal.url != expectedv6URL {
+		t.Errorf("URL of ipfonfig should be %q, but got %q", expectedv6URL, ipfOriginal.url)
 		return
 	}
 }

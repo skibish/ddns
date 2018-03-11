@@ -16,10 +16,16 @@ func (f fakeProviderOne) GetIP() (string, error) {
 	return "", errors.New("No IP found")
 }
 
+func (f fakeProviderOne) ForceIPV6() {
+}
+
 type fakeProviderTwo struct{}
 
 func (f fakeProviderTwo) GetIP() (string, error) {
 	return "45.45.45.45", nil
+}
+
+func (f fakeProviderTwo) ForceIPV6() {
 }
 
 func TestGetIP(t *testing.T) {

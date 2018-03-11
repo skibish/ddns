@@ -63,6 +63,7 @@ Configuration should be in the following format:
 ```yaml
 token: "AMAZING TOKEN"                          # Digital Ocean token
 domain: "example.com"                           # Domain to update
+forceIPV6: true                                 # Use IPv6 address resolve (Default false and force IPv4)
 records:                                        # Records of the domain to update
   - type: "A"                                   # Record type
     name: "www"                                 # Record name
