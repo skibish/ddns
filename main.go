@@ -60,9 +60,9 @@ func main() {
 	provider := ipprovider.New()
 
 	providerList := []ipprovider.Provider{
-		ifconfig.New(c),
 		ipify.New(c),
 		wtfismyip.New(c),
+		ifconfig.New(c),
 	}
 
 	if cf.ForceIPV6 {
