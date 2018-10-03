@@ -81,7 +81,7 @@ func (u *Updater) Start() (err error) {
 			case <-periodC:
 				errCheck := u.checkAndUpdate()
 				if errCheck != nil {
-					log.Errorf("Failed to update: %s", errCheck.Error())
+					log.Errorf("failed to update: %s", errCheck.Error())
 				}
 			}
 		}

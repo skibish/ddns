@@ -12,6 +12,6 @@ func GetHook(name string, cfg interface{}) (logrus.Hook, error) {
 	case "smtp":
 		return initSMTPNotifier(cfg)
 	default:
-		return nil, fmt.Errorf("Notifier %q does not exist", name)
+		return nil, fmt.Errorf("notifier %q does not exist", name)
 	}
 }
