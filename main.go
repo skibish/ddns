@@ -61,8 +61,8 @@ func main() {
 
 	providerList := []ipprovider.Provider{
 		ifconfig.New(c),
-		ipify.New(c),
 		wtfismyip.New(c),
+		ipify.New(c),
 	}
 
 	if cf.ForceIPV6 {
