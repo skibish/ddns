@@ -80,7 +80,7 @@ domain: example.com`), 0644)
 		return
 	}
 	_, errConf := NewConfiguration(filePath)
-	if errConf.Error() != "Token can't be empty" {
+	if errConf.Error() != "token can't be empty" {
 		t.Error("Should be error, but everything is OK")
 		return
 	}
@@ -94,7 +94,7 @@ domain: ""`), 0644)
 		return
 	}
 	_, errConf2 := NewConfiguration(filePath)
-	if errConf2.Error() != "Domain can't be empty" {
+	if errConf2.Error() != "domain can't be empty" {
 		t.Error("Should be error, but everything is OK")
 		return
 	}

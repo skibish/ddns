@@ -36,7 +36,7 @@ func initSMTPNotifier(cfg interface{}) (*SMTPConfig, error) {
 	// it to map[string]string.
 	originalCfg, ok := cfg.(map[interface{}]interface{})
 	if !ok {
-		return nil, errors.New("Not converted passed configuration")
+		return nil, errors.New("not converted passed configuration")
 	}
 	m2 := make(map[string]interface{})
 
@@ -45,7 +45,7 @@ func initSMTPNotifier(cfg interface{}) (*SMTPConfig, error) {
 		case string:
 			m2[key] = value
 		default:
-			return nil, errors.New("All keys should be strings in YAML")
+			return nil, errors.New("all keys should be strings in YAML")
 		}
 	}
 
@@ -124,7 +124,7 @@ func (s *SMTPConfig) Fire(entry *logrus.Entry) error {
 	if s.Secure {
 		errSend := s.sendSecure(auth, msg)
 		if errSend != nil {
-			fmt.Fprintf(s.errorW, "Unable to send email: %v\n", errSend)
+			fmt.Fprintf(s.errorW, "unable to send email: %v\n", errSend)
 			return errSend
 		}
 
@@ -134,7 +134,7 @@ func (s *SMTPConfig) Fire(entry *logrus.Entry) error {
 	errSend := s.send(s.Host+":"+s.Port, auth, s.User, []string{s.To}, []byte(msg))
 
 	if errSend != nil {
-		fmt.Fprintf(s.errorW, "Unable to send email: %v\n", errSend)
+		fmt.Fprintf(s.errorW, "unable to send email: %v\n", errSend)
 		return errSend
 	}
 

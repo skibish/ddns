@@ -23,11 +23,11 @@ type Configuration struct {
 // valid checks that provided configuration is valid
 func (c *Configuration) valid() error {
 	if c.Token == "" {
-		return errors.New("Token can't be empty")
+		return errors.New("token can't be empty")
 	}
 
 	if c.Domain == "" {
-		return errors.New("Domain can't be empty")
+		return errors.New("domain can't be empty")
 	}
 
 	return nil
