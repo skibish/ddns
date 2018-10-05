@@ -3,6 +3,7 @@ package ifconfig
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -123,8 +124,12 @@ func TestIfConfigFailedOnGet(t *testing.T) {
 		return
 	}
 
-	if errGet.Error() != "ifconfig: Get http://127.0.0.1:1234: dial tcp 127.0.0.1:1234: getsockopt: connection refused" {
+	if !isMatchingErrorMessage(errGet.Error(), "ifconfig", "connection refused") {
 		t.Errorf("Error was, but not related to the request fail: %v", errGet.Error())
 		return
 	}
+}
+
+func isMatchingErrorMessage(message string, prefix, suffix string) bool {
+	return strings.HasPrefix(message, prefix) && strings.HasSuffix(message, suffix)
 }

@@ -3,6 +3,7 @@ package ipify
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -123,8 +124,12 @@ func TestIpifyFailedOnGet(t *testing.T) {
 		return
 	}
 
-	if errGet.Error() != "ipify: Get http://127.0.0.1:1234: dial tcp 127.0.0.1:1234: getsockopt: connection refused" {
+	if !isMatchingErrorMessage(errGet.Error(),"ipify","connection refused") {
 		t.Error("Error was, but not related to the request fail")
 		return
 	}
+}
+
+func isMatchingErrorMessage(message string, prefix, suffix string) bool {
+	return strings.HasPrefix(message, prefix) && strings.HasSuffix(message, suffix)
 }
