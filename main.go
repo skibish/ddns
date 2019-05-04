@@ -73,15 +73,22 @@ func main() {
 
 	provider.Register(providerList...)
 
-	// Initialize and start updater
-	upd, errUpdater := updater.New(c, provider, cf, *checkPeriod)
-	if errUpdater != nil {
-		log.Fatal(errUpdater)
+	if cf.Domain != "" {
+		log.Println("WARNING: In future releases `domain` key will be deprecated. Please switch to `domains` instead.")
+		cf.Domains = append(cf.Domains, cf.Domain)
 	}
 
-	errStart := upd.Start()
-	if errStart != nil {
-		log.Fatal(errStart)
+	// Initialize and start updaters
+	for _, domain := range cf.Domains {
+		upd, errUpdater := updater.New(c, provider, cf, domain, *checkPeriod)
+		if errUpdater != nil {
+			log.Fatal(errUpdater)
+		}
+
+		errStart := upd.Start()
+		if errStart != nil {
+			log.Fatal(errStart)
+		}
 	}
 
 	select {}

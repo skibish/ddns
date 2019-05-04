@@ -12,7 +12,7 @@ Personal DDNS client with [Digital Ocean Networking](https://www.digitalocean.co
 We have services like [DynDNS](http://dyn.com/dns/), [No-IP](http://www.noip.com/) to access PCs remotely. But do we need them?
 This project is your own DDNS solution and will work for free (thanks to [Digital Ocean Networking](https://www.digitalocean.com/products/networking/) DNS).
 
-## What is DDNS?
+## What is DDNS
 
 *From [Wikipedia](https://en.wikipedia.org/wiki/Dynamic_DNS)*
 > Dynamic DNS (DDNS or DynDNS) is a method of automatically updating a name server in the Domain Name System (DNS), often in real time, with the active DDNS configuration of its configured hostnames, addresses or other information.
@@ -60,11 +60,13 @@ In your domain name provider configuration point domain to Digital Ocean NS reco
 *Refer to: [How To Set Up a Host Name with DigitalOcean](https://www.digitalocean.com/community/tutorials/how-to-set-up-a-host-name-with-digitalocean)*
 
 Configuration should be in the following format:
+
 ```yaml
 token: "AMAZING TOKEN"                          # Digital Ocean token
-domain: "example.com"                           # Domain to update
+domains:                                        # Domains to update
+  - "example.com"
 forceIPV6: true                                 # Use IPv6 address resolve (Default false and force IPv4)
-records:                                        # Records of the domain to update
+records:                                        # Records of the domains to update
   - type: "A"                                   # Record type
     name: "www"                                 # Record name
   - type: "TXT"

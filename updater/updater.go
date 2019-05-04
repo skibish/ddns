@@ -26,11 +26,11 @@ type Updater struct {
 }
 
 // New return new Updater.
-func New(hc *http.Client, ipprovider *ipprovider.IPProvider, cfg *conf.Configuration, updateTick time.Duration) (u *Updater, err error) {
+func New(hc *http.Client, ipprovider *ipprovider.IPProvider, cfg *conf.Configuration, domain string, updateTick time.Duration) (u *Updater, err error) {
 
 	u = &Updater{
 		updateTick:   updateTick,
-		digitalOcean: do.New(cfg.Domain, cfg.Token, hc),
+		digitalOcean: do.New(domain, cfg.Token, hc),
 		ipprovider:   ipprovider,
 	}
 
