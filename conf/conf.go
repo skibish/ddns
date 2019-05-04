@@ -14,6 +14,7 @@ import (
 type Configuration struct {
 	Token     string                 `yaml:"token"`
 	Domain    string                 `yaml:"domain"`
+	Domains   []string               `yaml:"domains"`
 	ForceIPV6 bool                   `yaml:"forceIPV6"`
 	Records   []do.Record            `yaml:"records"`
 	Notify    map[string]interface{} `yaml:"notify"`
@@ -26,8 +27,16 @@ func (c *Configuration) valid() error {
 		return errors.New("token can't be empty")
 	}
 
-	if c.Domain == "" {
+	if c.Domain == "" && len(c.Domains) == 0 {
 		return errors.New("domain can't be empty")
+	}
+
+	if len(c.Domains) > 0 {
+		for _, domain := range c.Domains {
+			if domain == "" {
+				return errors.New("domain can't be empty")
+			}
+		}
 	}
 
 	return nil
