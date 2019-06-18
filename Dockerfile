@@ -27,4 +27,4 @@ FROM golang:1.12.6-alpine
 COPY --from=builder /app/ddns /app/
 
 # And now run the binary
-ENTRYPOINT ["/bin/sh", "-c", "/app/ddns -conf-file /config/.ddns.yml"]
+ENTRYPOINT ["/app/ddns"]
