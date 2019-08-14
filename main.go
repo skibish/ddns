@@ -17,21 +17,18 @@ import (
 	"github.com/skibish/ddns/notifier"
 )
 
-var (
-	reqTimeouts = flag.Duration("req-timeout", 10*time.Second, "Request timeout to external resources")
-	checkPeriod = flag.Duration("check-period", 5*time.Minute, "Check if IP has been changed period")
-	confFile    = flag.String("conf-file", "$HOME/.ddns.yml", "Location of the configuration file")
-)
-
-func init() {
+func main() {
 	log.SetFormatter(&log.TextFormatter{
 		DisableColors: true,
 	})
 	log.SetLevel(log.DebugLevel)
 	log.SetOutput(os.Stdout)
-}
 
-func main() {
+	var (
+		reqTimeouts = flag.Duration("req-timeout", 10*time.Second, "Request timeout to external resources")
+		checkPeriod = flag.Duration("check-period", 5*time.Minute, "Check if IP has been changed period")
+		confFile    = flag.String("conf-file", "$HOME/.ddns.yml", "Location of the configuration file")
+	)
 	flag.Parse()
 
 	// read configuration

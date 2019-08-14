@@ -109,7 +109,7 @@ func (u *Updater) syncRecords(allRecords []do.Record) error {
 		}
 
 		// if there was no match, we should create new DNS record
-		// and updatee current configuration
+		// and update current configuration
 		if u.storage.Records[i].ID == 0 {
 			// if there is not template in configuration, set current IP as data,
 			// otherwise parse data and fill template with provided params

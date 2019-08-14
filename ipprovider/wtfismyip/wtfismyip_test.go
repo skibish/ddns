@@ -34,7 +34,7 @@ func TestWtfIsMyIPSuccess(t *testing.T) {
 		w.Write([]byte(`{
     "YourFuckingHostname": "45.45.45.45",
     "YourFuckingIPAddress": "45.45.45.45",
-    "YourFuckingISP": "SIA Awesomnes",
+    "YourFuckingISP": "SIA Awesomeness",
     "YourFuckingLocation": "Awesome street",
     "YourFuckingTorExit": "false"
 }`))
@@ -130,7 +130,7 @@ func TestWtfIsMyIPFailedOnGet(t *testing.T) {
 		return
 	}
 
-	if !isMatchingErrorMessage(errGet.Error(),"wtfismyip","connection refused") {
+	if !isMatchingErrorMessage(errGet.Error(), "wtfismyip", "connection refused") {
 		t.Error("Error was, but not related to the request fail")
 		return
 	}

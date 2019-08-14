@@ -96,7 +96,7 @@ notify:
 
 Currently supported notifications are listed below:
 
-**SMTP**
+#### SMTP
 
 ```yaml
 smtp:
@@ -108,3 +108,5 @@ smtp:
   subject: "My DDNS sending me a message"
   secure: true # Optional flag. Set it, if you will send emails with SSL
 ```
+
+#### Telegram
