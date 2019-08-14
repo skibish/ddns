@@ -70,11 +70,6 @@ func main() {
 
 	provider.Register(providerList...)
 
-	if cf.Domain != "" {
-		log.Println("WARNING: In future releases `domain` key will be deprecated. Please switch to `domains` instead.")
-		cf.Domains = append(cf.Domains, cf.Domain)
-	}
-
 	// Initialize and start updaters
 	for _, domain := range cf.Domains {
 		upd, errUpdater := updater.New(c, provider, cf, domain, *checkPeriod)

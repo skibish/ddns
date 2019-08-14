@@ -79,6 +79,8 @@ params:
 notify:                                         # Optional notifiers
   smtp:
     read: below
+  telegram:
+    read: below
 ```
 
 ### Notifications
@@ -110,3 +112,9 @@ smtp:
 ```
 
 #### Telegram
+
+```yaml
+telegram:
+  token: "telegram bot token"
+  chat_id: "1234"
+```
