@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 
 	"github.com/sirupsen/logrus"
 )
@@ -15,6 +16,7 @@ import (
 type TelegramConfig struct {
 	Token  string `json:"token"`
 	ChatID string `json:"chat_id"`
+	send   func(string) error
 	errorW io.Writer
 }
 
@@ -49,22 +51,24 @@ func initTelegramNotifier(cfg interface{}) (*TelegramConfig, error) {
 		return nil, errUnm
 	}
 
+	tg.errorW = os.Stdout
+	// function that send notification to telegram
+	tg.send = func(msg string) error {
+		u := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", tg.Token)
+		data := url.Values{
+			"chat_id": {tg.ChatID},
+			"text":    {msg},
+		}
+
+		_, err := http.PostForm(u, data)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
 	return &tg, nil
-}
-
-func (tg *TelegramConfig) send(msg string) error {
-	u := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", tg.Token)
-	data := url.Values{
-		"chat_id": {tg.ChatID},
-		"text":    {msg},
-	}
-
-	_, err := http.PostForm(u, data)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // Fire fires hook
