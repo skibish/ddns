@@ -7,8 +7,8 @@ test: ## run tests
 	go test -v -cover -race `go list ./... | grep -v /vendor/`
 
 build: ## build binaries for distribution
-	GOOS=linux GOARCH=386 go build -o ddns-Linux-x86_64 .
-	GOOS=darwin GOARCH=386 go build -o ddns-Darwin-x86_64 .
+	GOOS=linux GOARCH=amd64 go build -o ddns-Linux-x86_64 .
+	GOOS=darwin GOARCH=amd64 go build -o ddns-Darwin-x86_64 .
 	GOOS=linux GOARCH=arm GOARM=7 go build -o ddns-Linux-armv7l .
 
 help:

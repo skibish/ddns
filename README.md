@@ -17,9 +17,9 @@ This project is your own DDNS solution and will work for free (thanks to [Digita
 *From [Wikipedia](https://en.wikipedia.org/wiki/Dynamic_DNS)*
 > Dynamic DNS (DDNS or DynDNS) is a method of automatically updating a name server in the Domain Name System (DNS), often in real time, with the active DDNS configuration of its configured hostnames, addresses or other information.
 
-## How to start
+## Installation
 
-Put binary in `/usr/local/bin`.
+Download binary from [releases](https://github.com/skibish/ddns/releases) to `/usr/local/bin/ddns`.
 
 And start it as:
 
@@ -27,10 +27,12 @@ And start it as:
 ddns
 ```
 
-Or you can start `ddns` in background:
+Or you can download [Docker image](https://hub.docker.com/r/skibish/ddns) and use it:
 
 ```bash
-ddns > /dev/null 2>&1 &
+docker run \
+  -v /path/to/config.yml:/config/.ddns.yml \
+  skibish/ddns -conf-file /config/.ddns.yml
 ```
 
 ## Documentation
@@ -42,13 +44,13 @@ You can download binary for your OS from [releases page](https://github.com/skib
 Run `ddns -h`, to see help. It will output:
 
 ```text
-Usage of ddns:
+Usage of ./ddns:
   -check-period duration
-    	Check if IP has been changed period (default 5m0s)
+      Check if IP has been changed period (default 5m0s)
   -conf-file string
-    	Location of the configuration file (default "$HOME/.ddns.yml")
+      Location of the configuration file (default "$HOME/.ddns.yml")
   -req-timeout duration
-    	Request timeout to external resources (default 10s)
+      Request timeout to external resources (default 10s)
 ```
 
 **Configuration should be supplied.** By default it is read from `$HOME/.ddns.yml`.
@@ -85,7 +87,8 @@ notify:                                         # Optional notifiers
 
 ### Notifications
 
-Not you can also add notifications to other systems. These notifications are based on [sirupsen/logrus hooks](https://github.com/sirupsen/logrus#hooks). Add them to the configuration file as:
+These notifications are based on [sirupsen/logrus hooks](https://github.com/sirupsen/logrus#hooks).
+Add them to the configuration file as:
 
 ```yaml
 # config part from the top
@@ -96,7 +99,7 @@ notify:
     # ...configuration
 ```
 
-Currently supported notifications are listed below:
+List of supported notifications:
 
 #### SMTP
 
