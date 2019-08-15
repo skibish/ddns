@@ -61,7 +61,7 @@ func initSMTPNotifier(cfg interface{}) (*SMTPConfig, error) {
 		return nil, errUnm
 	}
 
-	// we are not using smtp.SendMail dirrectly, because we want to test
+	// we are not using smtp.SendMail directly, because we want to test
 	// Fire() method
 	s.send = smtp.SendMail
 	s.errorW = os.Stdout
@@ -112,7 +112,7 @@ func (s *SMTPConfig) sendSecure(auth smtp.Auth, msg string) error {
 
 // Fire fires hook
 func (s *SMTPConfig) Fire(entry *logrus.Entry) error {
-	// ignoring recoring of events on DEBUG
+	// ignoring recording of events on DEBUG
 	if entry.Level == logrus.DebugLevel {
 		return nil
 	}

@@ -7,38 +7,6 @@ import (
 	"testing"
 )
 
-func TestNewConfigurationSuccess(t *testing.T) {
-	filePath := "/tmp/demo.yml"
-	defer os.Remove(filePath)
-
-	errWrite := ioutil.WriteFile(filePath, []byte(`token: amazing
-domain: example.com
-records:
-  - type: A
-    name: www`), 0644)
-
-	if errWrite != nil {
-		t.Error("Failed to write file")
-		return
-	}
-
-	conf, errConf := NewConfiguration(filePath)
-	if errConf != nil {
-		t.Errorf("Got error: %s", errConf.Error())
-		return
-	}
-
-	if conf.Domain != "example.com" {
-		t.Errorf("Expected example.com, got %s", conf.Domain)
-		return
-	}
-
-	if conf.Records[0].Name != "www" {
-		t.Errorf("Expected www, got %s", conf.Records[0].Name)
-		return
-	}
-}
-
 func TestNewConfigurationMultipleDomainsSuccess(t *testing.T) {
 	filePath := "/tmp/demo.yml"
 	defer os.Remove(filePath)
@@ -68,12 +36,12 @@ records:
 	}
 
 	if conf.Domains[0] != "example.com" {
-		t.Errorf("Expected example.com, got %s", conf.Domain)
+		t.Errorf("Expected example.com, got %s", conf.Domains[0])
 		return
 	}
 
 	if conf.Domains[1] != "example.net" {
-		t.Errorf("Expected example.net, got %s", conf.Domain)
+		t.Errorf("Expected example.net, got %s", conf.Domains[0])
 		return
 	}
 
@@ -117,7 +85,8 @@ func TestNewConfigurationValid(t *testing.T) {
 
 	// check for token
 	errWrite := ioutil.WriteFile(filePath, []byte(`token: ""
-domain: example.com`), 0644)
+domains:
+  - example.com`), 0644)
 
 	if errWrite != nil {
 		t.Error("Failed to write file")
@@ -125,20 +94,6 @@ domain: example.com`), 0644)
 	}
 	_, errConf := NewConfiguration(filePath)
 	if errConf.Error() != "token can't be empty" {
-		t.Error("Should be error, but everything is OK")
-		return
-	}
-
-	// check for domain
-	errWrite2 := ioutil.WriteFile(filePath, []byte(`token: abc
-domain: ""`), 0644)
-
-	if errWrite2 != nil {
-		t.Error("Failed to write file")
-		return
-	}
-	_, errConf2 := NewConfiguration(filePath)
-	if errConf2.Error() != "domain can't be empty" {
 		t.Error("Should be error, but everything is OK")
 		return
 	}
@@ -152,7 +107,7 @@ domains: [""]`), 0644)
 		return
 	}
 	_, errConf3 := NewConfiguration(filePath)
-	if errConf3.Error() != "domain can't be empty" {
+	if errConf3.Error() != "domains can't be empty" {
 		t.Error("Should be error, but everything is OK")
 		return
 	}
