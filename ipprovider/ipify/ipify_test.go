@@ -8,7 +8,7 @@ import (
 )
 
 func TestIpifyNew(t *testing.T) {
-	expectedURL := "https://api4.ipify.org/?format=json"
+	expectedURL := "https://api.ipify.org/?format=json"
 	ipf := New(&http.Client{})
 	ipfOriginal := ipf.(*ipify)
 	if ipfOriginal.url != expectedURL {
