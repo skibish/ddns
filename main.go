@@ -6,7 +6,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/skibish/ddns/ipprovider/ifconfig"
 	"github.com/skibish/ddns/ipprovider/ipify"
 	"github.com/skibish/ddns/ipprovider/wtfismyip"
 	"github.com/skibish/ddns/updater"
@@ -57,7 +56,7 @@ func main() {
 	provider := ipprovider.New()
 
 	providerList := []ipprovider.Provider{
-		ifconfig.New(c),
+		// ifconfig.New(c),
 		wtfismyip.New(c),
 		ipify.New(c),
 	}
