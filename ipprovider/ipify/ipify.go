@@ -26,7 +26,7 @@ type ipifyResponse struct {
 func New(c *http.Client) ipprovider.Provider {
 	return &ipify{
 		c:   c,
-		url: "https://api4.ipify.org/?format=json",
+		url: "https://api.ipify.org/?format=json",
 	}
 }
 
