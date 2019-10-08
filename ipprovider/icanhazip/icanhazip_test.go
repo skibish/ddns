@@ -1,4 +1,4 @@
-package ifconfig
+package icanhazip
 
 import (
 	"net/http"
@@ -7,37 +7,37 @@ import (
 	"testing"
 )
 
-func TestIfConfigNew(t *testing.T) {
-	expectedURL := "https://v4.ifconfig.co/json"
+func TestIcanhazipNew(t *testing.T) {
+	expectedURL := "https://ipv4.icanhazip.com"
 	ifc := New(&http.Client{})
-	ifcOriginal := ifc.(*ifconfig)
+	ifcOriginal := ifc.(*icanhazip)
 	if ifcOriginal.url != expectedURL {
-		t.Errorf("URL of ifconfig should be %q, but got %q", expectedURL, ifcOriginal.url)
+		t.Errorf("URL of icanhazip should be %q, but got %q", expectedURL, ifcOriginal.url)
 		return
 	}
 }
 
 func TestForceIPV6(t *testing.T) {
-	expectedv6URL := "https://v6.ifconfig.co/json"
+	expectedv6URL := "https://ipv6.icanhazip.com"
 	ifc := New(&http.Client{})
 	ifc.ForceIPV6()
-	ifcOriginal := ifc.(*ifconfig)
+	ifcOriginal := ifc.(*icanhazip)
 	if ifcOriginal.url != expectedv6URL {
-		t.Errorf("URL of ifconfig should be %q, but got %q", expectedv6URL, ifcOriginal.url)
+		t.Errorf("URL of icanhazip should be %q, but got %q", expectedv6URL, ifcOriginal.url)
 		return
 	}
 }
 
-func TestIfConfigSuccess(t *testing.T) {
+func TestIcanhazipSuccess(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 
-		w.Write([]byte(`{"city": "Unknown","country": "Latvia","ip": "45.45.45.45","ip_decimal": 1424881195}`))
+		w.Write([]byte(`45.45.45.45`))
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(handler))
 	defer server.Close()
 
-	ifc := &ifconfig{
+	ifc := &icanhazip{
 		c:   &http.Client{},
 		url: server.URL,
 	}
@@ -54,7 +54,7 @@ func TestIfConfigSuccess(t *testing.T) {
 	}
 }
 
-func TestIfConfigNotSuccessCode(t *testing.T) {
+func TestIcanhazipNotSuccessCode(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 
 		w.WriteHeader(429)
@@ -63,7 +63,7 @@ func TestIfConfigNotSuccessCode(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(handler))
 	defer server.Close()
 
-	ifc := &ifconfig{
+	ifc := &icanhazip{
 		c:   &http.Client{},
 		url: server.URL,
 	}
@@ -74,21 +74,21 @@ func TestIfConfigNotSuccessCode(t *testing.T) {
 		return
 	}
 
-	if errGet.Error() != "ifconfig: Status code is not in success range: 429" {
+	if errGet.Error() != "icanhazip: Status code is not in success range: 429" {
 		t.Error("Error was, but not about status code")
 		return
 	}
 }
 
-func TestIfConfigFailedDecode(t *testing.T) {
+func TestIcanhazipFailedRead(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`something wrong`))
+		w.Header().Set("Content-Length", "1")
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(handler))
 	defer server.Close()
 
-	ifc := &ifconfig{
+	ifc := &icanhazip{
 		c:   &http.Client{},
 		url: server.URL,
 	}
@@ -98,14 +98,9 @@ func TestIfConfigFailedDecode(t *testing.T) {
 		t.Errorf("Should be error, but is success")
 		return
 	}
-
-	if errGet.Error() != "ifconfig: invalid character 's' looking for beginning of value" {
-		t.Error("Error was, but not related to parsing")
-		return
-	}
 }
 
-func TestIfConfigFailedOnGet(t *testing.T) {
+func TestIcanhazipFailedOnGet(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`something wrong`))
 	}
@@ -113,7 +108,7 @@ func TestIfConfigFailedOnGet(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(handler))
 	defer server.Close()
 
-	ifc := &ifconfig{
+	ifc := &icanhazip{
 		c:   &http.Client{},
 		url: "http://127.0.0.1:1234",
 	}
@@ -124,7 +119,7 @@ func TestIfConfigFailedOnGet(t *testing.T) {
 		return
 	}
 
-	if !isMatchingErrorMessage(errGet.Error(), "ifconfig", "connection refused") {
+	if !isMatchingErrorMessage(errGet.Error(), "icanhazip", "connection refused") {
 		t.Errorf("Error was, but not related to the request fail: %v", errGet.Error())
 		return
 	}
