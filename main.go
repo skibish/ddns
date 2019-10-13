@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -17,6 +18,11 @@ import (
 	"github.com/skibish/ddns/notifier"
 )
 
+var (
+	buildVersion    string
+	buildCommitHash string
+)
+
 func main() {
 	log.SetFormatter(&log.TextFormatter{
 		DisableColors: true,
@@ -28,8 +34,14 @@ func main() {
 		reqTimeouts = flag.Duration("req-timeout", 10*time.Second, "Request timeout to external resources")
 		checkPeriod = flag.Duration("check-period", 5*time.Minute, "Check if IP has been changed period")
 		confFile    = flag.String("conf-file", "$HOME/.ddns.yml", "Location of the configuration file")
+		showVersion = flag.Bool("v", false, "Show version and exit")
 	)
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Printf("Version: %s\nCommitHash: %s\n", buildVersion, buildCommitHash)
+		return
+	}
 
 	// read configuration
 	var errConf error

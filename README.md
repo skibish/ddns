@@ -51,6 +51,7 @@ Usage of ./ddns:
       Location of the configuration file (default "$HOME/.ddns.yml")
   -req-timeout duration
       Request timeout to external resources (default 10s)
+  -v  Show version and exit
 ```
 
 **Configuration should be supplied.** By default it is read from `$HOME/.ddns.yml`.
