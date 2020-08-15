@@ -5,7 +5,7 @@
 
 Personal DDNS client with [Digital Ocean Networking](https://www.digitalocean.com/products/networking/) DNS as backend.
 
-*[Read about it the Blog](https://sergeykibish.com/blog/your-personal-ddns)*
+*[Read about it in the Blog](https://sergeykibish.com/blog/your-personal-ddns)*
 
 ## Motivation
 
