@@ -7,11 +7,25 @@ import (
 	"testing"
 )
 
-func TestNewConfigurationMultipleDomainsSuccess(t *testing.T) {
-	filePath := "/tmp/demo.yml"
-	defer os.Remove(filePath)
+func createTmpFile(t *testing.T) (string, func()) {
+	t.Helper()
 
-	errWrite := ioutil.WriteFile(filePath, []byte(`token: amazing
+	f, err := ioutil.TempFile("", "demo-*.yml")
+	if err != nil {
+		t.Errorf("Failed to create temp file")
+	}
+
+	rm := func() {
+		os.Remove(f.Name())
+	}
+	return f.Name(), rm
+}
+
+func TestNewConfigurationMultipleDomainsSuccess(t *testing.T) {
+	fname, rm := createTmpFile(t)
+	defer rm()
+
+	errWrite := ioutil.WriteFile(fname, []byte(`token: amazing
 domains:
   - example.com
   - example.net
@@ -24,7 +38,7 @@ records:
 		return
 	}
 
-	conf, errConf := NewConfiguration(filePath)
+	conf, errConf := NewConfiguration(fname)
 	if errConf != nil {
 		t.Errorf("Got error: %s", errConf.Error())
 		return
@@ -54,25 +68,25 @@ records:
 func TestNewConfigurationReadFail(t *testing.T) {
 	filePath := "/tmp/demo1.yml"
 
-	_, errConf := NewConfiguration(filePath)
-	if errConf.Error() != "open /tmp/demo1.yml: no such file or directory" {
-		t.Error("Got error, but should be OK")
+	_, err := NewConfiguration(filePath)
+	if err == nil {
+		t.Errorf("Everything is OK, but should be error: %v", err)
 		return
 	}
 }
 
 func TestNewConfigurationParseError(t *testing.T) {
-	filePath := "/tmp/demo.yml"
-	defer os.Remove(filePath)
+	fname, rm := createTmpFile(t)
+	defer rm()
 
-	errWrite := ioutil.WriteFile(filePath, []byte(`is not yml`), 0644)
+	errWrite := ioutil.WriteFile(fname, []byte(`is not yml`), 0644)
 
 	if errWrite != nil {
 		t.Error("Failed to write file")
 		return
 	}
 
-	_, errConf := NewConfiguration(filePath)
+	_, errConf := NewConfiguration(fname)
 	if !strings.Contains(errConf.Error(), "yaml: unmarshal errors") {
 		t.Error("Should be error, but everything is OK")
 		return
@@ -80,11 +94,11 @@ func TestNewConfigurationParseError(t *testing.T) {
 }
 
 func TestNewConfigurationValid(t *testing.T) {
-	filePath := "/tmp/demo.yml"
-	defer os.Remove(filePath)
+	fname, rm := createTmpFile(t)
+	defer rm()
 
 	// check for token
-	errWrite := ioutil.WriteFile(filePath, []byte(`token: ""
+	errWrite := ioutil.WriteFile(fname, []byte(`token: ""
 domains:
   - example.com`), 0644)
 
@@ -92,21 +106,21 @@ domains:
 		t.Error("Failed to write file")
 		return
 	}
-	_, errConf := NewConfiguration(filePath)
+	_, errConf := NewConfiguration(fname)
 	if errConf.Error() != "token can't be empty" {
 		t.Error("Should be error, but everything is OK")
 		return
 	}
 
 	// check for domains
-	errWrite3 := ioutil.WriteFile(filePath, []byte(`token: abc
+	errWrite3 := ioutil.WriteFile(fname, []byte(`token: abc
 domains: [""]`), 0644)
 
 	if errWrite3 != nil {
 		t.Error("Failed to write file")
 		return
 	}
-	_, errConf3 := NewConfiguration(filePath)
+	_, errConf3 := NewConfiguration(fname)
 	if errConf3.Error() != "domains can't be empty" {
 		t.Error("Should be error, but everything is OK")
 		return

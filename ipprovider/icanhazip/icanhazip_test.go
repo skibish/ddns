@@ -3,7 +3,6 @@ package icanhazip
 import (
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 )
 
@@ -118,13 +117,4 @@ func TestIcanhazipFailedOnGet(t *testing.T) {
 		t.Errorf("Should be error, but is success")
 		return
 	}
-
-	if !isMatchingErrorMessage(errGet.Error(), "icanhazip", "connection refused") {
-		t.Errorf("Error was, but not related to the request fail: %v", errGet.Error())
-		return
-	}
-}
-
-func isMatchingErrorMessage(message string, prefix, suffix string) bool {
-	return strings.HasPrefix(message, prefix) && strings.HasSuffix(message, suffix)
 }
