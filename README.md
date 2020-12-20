@@ -1,6 +1,7 @@
 # DDNS
 
-[![Build Status](https://travis-ci.org/skibish/ddns.svg?branch=master)](https://travis-ci.org/skibish/ddns)
+![Test](https://github.com/skibish/ddns/workflows/test/badge.svg)
+![Release](https://github.com/skibish/ddns/workflows/release/badge.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/skibish/ddns)](https://goreportcard.com/report/github.com/skibish/ddns)
 
 Personal DDNS client with [Digital Ocean Networking](https://www.digitalocean.com/products/networking/) DNS as backend.
