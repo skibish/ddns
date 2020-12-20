@@ -2,7 +2,7 @@ on:
   release:
     types: [created]
 
-name: Upload release assets after release is created
+name: release
 jobs:
   build:
     name: build binaries

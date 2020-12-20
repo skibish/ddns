@@ -1,6 +1,6 @@
 # DDNS
 
-![Test](https://github.com/skibish/ddns/workflows/test/badge.svg)
+![Test](https://github.com/skibish/ddns/workflows/run%20tests/badge.svg)
 ![Release](https://github.com/skibish/ddns/workflows/release/badge.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/skibish/ddns)](https://goreportcard.com/report/github.com/skibish/ddns)
 
