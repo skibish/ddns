@@ -123,11 +123,6 @@ func TestIpifyFailedOnGet(t *testing.T) {
 		t.Errorf("Should be error, but is success")
 		return
 	}
-
-	if !isMatchingErrorMessage(errGet.Error(),"ipify","connection refused") {
-		t.Error("Error was, but not related to the request fail")
-		return
-	}
 }
 
 func isMatchingErrorMessage(message string, prefix, suffix string) bool {

@@ -25,7 +25,7 @@ jobs:
           GOOS=linux GOARCH=amd64 go build -ldflags "-X main.buildVersion=$RELEASE_TAG -X main.buildCommitHash=$GITHUB_SHA" -o bin/ddns-Linux-x86_64 .
           GOOS=darwin GOARCH=amd64 go build -ldflags "-X main.buildVersion=$RELEASE_TAG -X main.buildCommitHash=$GITHUB_SHA" -o bin/ddns-Darwin-x86_64 .
           GOOS=linux GOARCH=arm GOARM=7 go build -ldflags "-X main.buildVersion=$RELEASE_TAG -X main.buildCommitHash=$GITHUB_SHA" -o bin/ddns-Linux-armv7l .
-          GOOS=windows GOARCH=amd64 go build -ldflags "-X main.buildVersion=$RELEASE_TAG -X main.buildCommitHash=$GITHUB_SHA" -o bin/ddns-Windows-x86_64 .
+          GOOS=windows GOARCH=amd64 go build -ldflags "-X main.buildVersion=$RELEASE_TAG -X main.buildCommitHash=$GITHUB_SHA" -o bin/ddns-Windows-x86_64.exe .
       - name: upload artifacts
         uses: actions/upload-artifact@v2
         with:
