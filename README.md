@@ -61,7 +61,7 @@ You need to setup your domain in Digital Ocean Networks panel.
 
 In your domain name provider configuration point domain to Digital Ocean NS records.
 
-*Refer to: [How To Set Up a Host Name with DigitalOcean](https://www.digitalocean.com/community/tutorials/how-to-set-up-a-host-name-with-digitalocean)*
+*Refer to: [How To Point to DigitalOcean Nameservers From Common Domain Registrars](https://www.digitalocean.com/community/tutorials/how-to-point-to-digitalocean-nameservers-from-common-domain-registrars)*
 
 Configuration should be in the following format:
 
