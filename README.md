@@ -85,6 +85,8 @@ notify:                                         # Optional notifiers
     read: below
   telegram:
     read: below
+  gotify:
+    read: below
 ```
 
 ### Notifications
@@ -122,4 +124,13 @@ smtp:
 telegram:
   token: "telegram bot token"
   chat_id: "1234"
+```
+
+#### Gotify
+
+```yaml
+gotify:
+  app_url: "https://gotify.example.com" # url for gotify
+  app_token: "" # token from gotify app
+  title: "DDNS" #optional title of messages, defaults to DDNS
 ```
