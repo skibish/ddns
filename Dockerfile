@@ -16,6 +16,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ddns .
 
 # Now create a new stage and only copy the binary we need (keeps the container small)
 FROM scratch
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /app/ddns /
 
 ENTRYPOINT ["/ddns"]
