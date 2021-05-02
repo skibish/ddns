@@ -1,10 +1,25 @@
+# github.com/davecgh/go-spew v1.1.1
+## explicit
+# github.com/kr/pretty v0.1.0
+## explicit
 # github.com/mitchellh/copystructure v0.0.0-20170525013902-d23ffcb85de3
+## explicit
 github.com/mitchellh/copystructure
 # github.com/mitchellh/reflectwalk v0.0.0-20170726202117-63d60e9d0dbc
+## explicit
 github.com/mitchellh/reflectwalk
+# github.com/pmezard/go-difflib v1.0.0
+## explicit
 # github.com/sirupsen/logrus v0.0.0-20170620144510-3d4380f53a34
+## explicit
 github.com/sirupsen/logrus
+# github.com/stretchr/testify v1.2.2
+## explicit
 # golang.org/x/sys v0.0.0-20170308153327-99f16d856c98
+## explicit
 golang.org/x/sys/unix
+# gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127
+## explicit
 # gopkg.in/yaml.v2 v2.0.0-20170208141851-a3f3340b5840
+## explicit
 gopkg.in/yaml.v2

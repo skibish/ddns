@@ -2,7 +2,7 @@
 # To run:   docker run -v /path/to/config.yml:/config/.ddns.yml ddns -conf-file /config/.ddns.yml
 # Or if your .ddns.yml is in the current working directory and is named .ddns.yml
 # docker run -v ${PWD}:/config ddns
-FROM golang:1.13.1-alpine as builder
+FROM golang:1.16.3-alpine as builder
 
 WORKDIR /app
 
@@ -12,10 +12,10 @@ RUN go mod download && go mod verify
 
 # Copy everything in and do the go build
 COPY . .
-RUN go build -v
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ddns .
 
 # Now create a new stage and only copy the binary we need (keeps the container small)
-FROM alpine:3.10.2
+FROM scratch
 COPY --from=builder /app/ddns /
 
 ENTRYPOINT ["/ddns"]
