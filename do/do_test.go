@@ -9,7 +9,7 @@ import (
 func TestGetDomainRecordsSuccess(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 
-		if "Bearer amazingtoken" != r.Header.Get("Authorization") {
+		if r.Header.Get("Authorization") != "Bearer amazingtoken" {
 			t.Error("Not correct Authorization value")
 			return
 		}
@@ -100,7 +100,7 @@ func TestGetDomainRecordsParseError(t *testing.T) {
 func TestCreateRecordSuccess(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 
-		if "Bearer amazingtoken" != r.Header.Get("Authorization") {
+		if r.Header.Get("Authorization") != "Bearer amazingtoken" {
 			t.Error("Not correct Authorization value")
 			return
 		}
@@ -189,7 +189,7 @@ func TestCreateRecordParseError(t *testing.T) {
 func TestUpdateRecordSuccess(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 
-		if "Bearer amazingtoken" != r.Header.Get("Authorization") {
+		if r.Header.Get("Authorization") != "Bearer amazingtoken" {
 			t.Error("Not correct Authorization value")
 			return
 		}

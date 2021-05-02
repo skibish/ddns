@@ -3,7 +3,6 @@ package ipify
 import (
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 )
 
@@ -123,8 +122,4 @@ func TestIpifyFailedOnGet(t *testing.T) {
 		t.Errorf("Should be error, but is success")
 		return
 	}
-}
-
-func isMatchingErrorMessage(message string, prefix, suffix string) bool {
-	return strings.HasPrefix(message, prefix) && strings.HasSuffix(message, suffix)
 }

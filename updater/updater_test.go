@@ -48,7 +48,7 @@ func TestSyncRecordsCreateNew(t *testing.T) {
 				ID:   123,
 				Type: "A",
 				Name: "test",
-				Data: "127.0.0.1",
+				Data: record.Data,
 			}, nil
 		}
 
@@ -56,7 +56,7 @@ func TestSyncRecordsCreateNew(t *testing.T) {
 			ID:   124,
 			Type: "TXT",
 			Name: "neo",
-			Data: "127.0.0.1 and text",
+			Data: record.Data,
 		}, nil
 	}
 
@@ -65,7 +65,7 @@ func TestSyncRecordsCreateNew(t *testing.T) {
 			ID:   124,
 			Type: "TXT",
 			Name: "neo",
-			Data: "127.0.0.1 and text",
+			Data: record.Data,
 		}, nil
 	}
 
@@ -90,8 +90,7 @@ func TestSyncRecordsCreateNew(t *testing.T) {
 
 	u.ip = "127.0.0.1"
 
-	var errSync error
-	errSync = u.syncRecords(allRecords)
+	errSync := u.syncRecords(allRecords)
 	if errSync != nil {
 		t.Error(errSync)
 		return
@@ -131,8 +130,7 @@ func TestSyncRecordsCreateError(t *testing.T) {
 
 	u.ip = "127.0.0.1"
 
-	var errSync error
-	errSync = u.syncRecords(allRecords)
+	errSync := u.syncRecords(allRecords)
 	if errSync == nil {
 		t.Error("Should be error, but everything is OK.")
 		return
@@ -146,7 +144,7 @@ func TestSyncRecordsUpdateRecord(t *testing.T) {
 			ID:   123,
 			Type: "A",
 			Name: "test",
-			Data: "127.0.0.1",
+			Data: record.Data,
 		}, nil
 	}
 
@@ -168,8 +166,7 @@ func TestSyncRecordsUpdateRecord(t *testing.T) {
 
 	u.ip = "127.0.0.1"
 
-	var errSync error
-	errSync = u.syncRecords(allRecords)
+	errSync := u.syncRecords(allRecords)
 	if errSync != nil {
 		t.Error(errSync)
 		return
@@ -210,8 +207,7 @@ func TestSyncRecordsUpdateError(t *testing.T) {
 
 	u.ip = "127.0.0.1"
 
-	var errSync error
-	errSync = u.syncRecords(allRecords)
+	errSync := u.syncRecords(allRecords)
 	if errSync == nil {
 		t.Error("Should be error, but everything is OK.")
 		return
@@ -233,7 +229,7 @@ func TestCheckAndUpdateOnlyCheck(t *testing.T) {
 			ID:   124,
 			Type: "TXT",
 			Name: "neo",
-			Data: "127.0.0.1 and text",
+			Data: record.Data,
 		}, nil
 	}
 
@@ -252,8 +248,7 @@ func TestCheckAndUpdateOnlyCheck(t *testing.T) {
 
 	u.ip = "127.0.0.1"
 
-	var errCheck error
-	errCheck = u.checkAndUpdate()
+	errCheck := u.checkAndUpdate()
 	if errCheck != nil {
 		t.Error(errCheck)
 		return
@@ -272,7 +267,7 @@ func TestCheckAndUpdateOnlyUpdate(t *testing.T) {
 			ID:   123,
 			Type: "A",
 			Name: "test",
-			Data: "127.0.0.1",
+			Data: record.Data,
 		}, nil
 	}
 
@@ -302,8 +297,7 @@ func TestCheckAndUpdateOnlyUpdate(t *testing.T) {
 		ip:           "127.0.0.1",
 	}
 
-	var errUpdate error
-	errUpdate = u.checkAndUpdate()
+	errUpdate := u.checkAndUpdate()
 	if errUpdate != nil {
 		t.Error(errUpdate)
 		return
@@ -343,8 +337,7 @@ func TestCheckAndUpdateError(t *testing.T) {
 		ip:           "127.0.0.1",
 	}
 
-	var errUpdate error
-	errUpdate = u.checkAndUpdate()
+	errUpdate := u.checkAndUpdate()
 	if errUpdate == nil {
 		t.Error("Should be error, but everything is OK")
 		return

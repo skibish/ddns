@@ -15,8 +15,8 @@ var name = "digitalocean"
 
 var url = "https://api.digitalocean.com/v2"
 
-// ErrorRequset is returned when some request failed
-var ErrorRequset = errors.New("Request Failed")
+// ErrorRequest is returned when some request failed
+var ErrorRequest = errors.New("request Failed")
 
 // Record describe record structure
 type Record struct {
@@ -72,7 +72,7 @@ func (d *DigitalOcean) GetDomainRecords() ([]Record, error) {
 	defer res.Body.Close()
 
 	if !misc.Success(res.StatusCode) {
-		return nil, fmt.Errorf("%s: %s", name, ErrorRequset.Error())
+		return nil, fmt.Errorf("%s: %s", name, ErrorRequest.Error())
 	}
 
 	var records domainRecords
@@ -104,7 +104,7 @@ func (d *DigitalOcean) CreateRecord(record Record) (*Record, error) {
 	defer res.Body.Close()
 
 	if !misc.Success(res.StatusCode) {
-		return nil, fmt.Errorf("%s: %s", name, ErrorRequset.Error())
+		return nil, fmt.Errorf("%s: %s", name, ErrorRequest.Error())
 	}
 
 	var resRecord domainRecord
@@ -136,7 +136,7 @@ func (d *DigitalOcean) UpdateRecord(record Record) (*Record, error) {
 	defer res.Body.Close()
 
 	if !misc.Success(res.StatusCode) {
-		return nil, fmt.Errorf("%s: %s", name, ErrorRequset.Error())
+		return nil, fmt.Errorf("%s: %s", name, ErrorRequest.Error())
 	}
 
 	var resRecord domainRecord

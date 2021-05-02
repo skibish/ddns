@@ -43,7 +43,7 @@ func New(hc *http.Client, ipprovider *ipprovider.IPProvider, cfg *conf.Configura
 	var ok bool
 	u.storage, ok = copyForStorage.(*conf.Configuration)
 	if !ok {
-		return nil, errors.New("Failed to convert interface{} to conf.Configuration")
+		return nil, errors.New("failed to convert interface{} to conf.Configuration")
 	}
 	u.config = cfg
 
@@ -73,16 +73,13 @@ func (u *Updater) Start() (err error) {
 
 	periodC := time.NewTicker(u.updateTick).C
 
-	// start main proceess
+	// start main process
 	go func() {
 		// for defined period of time, perform IP check
-		for {
-			select {
-			case <-periodC:
-				errCheck := u.checkAndUpdate()
-				if errCheck != nil {
-					log.Errorf("failed to update: %s", errCheck.Error())
-				}
+		for range periodC {
+			errCheck := u.checkAndUpdate()
+			if errCheck != nil {
+				log.Errorf("failed to update: %s", errCheck.Error())
 			}
 		}
 
