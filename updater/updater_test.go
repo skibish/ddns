@@ -1,345 +1,206 @@
 package updater
 
 import (
-	"bufio"
-	"bytes"
-	"errors"
-	"log"
+	"context"
 	"testing"
+	"time"
 
-	"github.com/skibish/ddns/ipprovider"
-
+	"github.com/matryer/is"
 	"github.com/skibish/ddns/conf"
 	"github.com/skibish/ddns/do"
 )
 
-type TestDO struct {
-	getDomainRecords func() ([]do.Record, error)
-	createRecord     func(record do.Record) (*do.Record, error)
-	updateRecord     func(record do.Record) (*do.Record, error)
-}
+func TestUpdater(t *testing.T) {
+	var getIPidx int
 
-func (t TestDO) GetDomainRecords() ([]do.Record, error) {
-	return t.getDomainRecords()
-}
-func (t TestDO) CreateRecord(record do.Record) (*do.Record, error) {
-	return t.createRecord(record)
-}
-func (t TestDO) UpdateRecord(record do.Record) (*do.Record, error) {
-	return t.updateRecord(record)
-}
-
-type TestProvider struct {
-	getIP func() (string, error)
-}
-
-func (t TestProvider) ForceIPV6() {
-}
-
-func (t TestProvider) GetIP() (string, error) {
-	return t.getIP()
-}
-
-func TestSyncRecordsCreateNew(t *testing.T) {
-	doT := struct{ TestDO }{}
-	doT.createRecord = func(record do.Record) (*do.Record, error) {
-		if record.Type == "A" {
-			return &do.Record{
-				ID:   123,
-				Type: "A",
-				Name: "test",
-				Data: record.Data,
-			}, nil
-		}
-
-		return &do.Record{
-			ID:   124,
-			Type: "TXT",
-			Name: "neo",
-			Data: record.Data,
-		}, nil
-	}
-
-	doT.updateRecord = func(record do.Record) (*do.Record, error) {
-		return &do.Record{
-			ID:   124,
-			Type: "TXT",
-			Name: "neo",
-			Data: record.Data,
-		}, nil
-	}
-
-	cf := &conf.Configuration{
-		Records: []do.Record{
-			{Type: "A", Name: "test"},
-			{Type: "TXT", Name: "neo", Data: "{{.IP}} and text"},
+	tcases := []struct {
+		tname         string
+		cfg           *conf.Configuration
+		pm            *ProviderMock
+		pmGetIPCalls  int
+		dm            *DomainsServiceMock
+		dmCreateCalls int
+		dmUpdateCalls int
+		dmListCalls   int
+		sleep         time.Duration
+	}{
+		{
+			tname: "ok sync and create",
+			cfg: &conf.Configuration{
+				Domains: map[string][]do.Record{
+					"example.com": {
+						{
+							Type: "A",
+							Name: "ddns",
+						},
+					},
+				},
+				CheckPeriod:    3 * time.Second,
+				RequestTimeout: 5 * time.Second,
+			},
+			pm: &ProviderMock{
+				GetIPFunc: func(contextMoqParam context.Context) (string, error) {
+					return "10.0.5.1", nil
+				},
+			},
+			pmGetIPCalls: 1,
+			dm: &DomainsServiceMock{
+				CreateFunc: func(contextMoqParam context.Context, s string, record do.Record) error {
+					return nil
+				},
+				ListFunc: func(contextMoqParam context.Context, s string) ([]do.Record, error) {
+					return []do.Record{}, nil
+				},
+			},
+			dmCreateCalls: 1,
+			dmListCalls:   1,
+			sleep:         1 * time.Second,
+		},
+		{
+			tname: "ok sync and update",
+			cfg: &conf.Configuration{
+				Domains: map[string][]do.Record{
+					"example.com": {
+						{
+							Type: "A",
+							Name: "ddns",
+						},
+						{
+							Type: "txt",
+							Name: "ddns",
+							Data: "updated IP = {{.IP}}, hello, {{.world}}",
+						},
+					},
+				},
+				Params: map[string]string{
+					"hello": "world",
+				},
+				CheckPeriod:    1 * time.Second,
+				RequestTimeout: 5 * time.Second,
+			},
+			pm: &ProviderMock{
+				GetIPFunc: func(contextMoqParam context.Context) (string, error) {
+					ips := []string{"10.0.5.1", "10.0.0.1"}
+					ip := ips[getIPidx]
+					getIPidx++
+					return ip, nil
+				},
+			},
+			pmGetIPCalls: 2,
+			dm: &DomainsServiceMock{
+				UpdateFunc: func(contextMoqParam context.Context, s string, record do.Record) error {
+					return nil
+				},
+				ListFunc: func(contextMoqParam context.Context, s string) ([]do.Record, error) {
+					return []do.Record{
+						{
+							ID:   123,
+							Type: "A",
+							Name: "ddns",
+						},
+						{
+							ID:   124,
+							Type: "txt",
+							Name: "ddns",
+						},
+					}, nil
+				},
+			},
+			dmUpdateCalls: 4,
+			dmListCalls:   2,
+			sleep:         1500 * time.Millisecond,
 		},
 	}
 
-	cf.Params = map[string]string{}
+	for _, tc := range tcases {
+		t.Run(tc.tname, func(t *testing.T) {
+			getIPidx = 0
+			is := is.New(t)
 
-	u := &Updater{
-		digitalOcean: doT,
-		config:       cf,
-		storage:      cf,
-	}
+			u := New(tc.cfg)
+			u.do = tc.dm
+			u.ipprovider = tc.pm
 
-	allRecords := []do.Record{
-		{Type: "A", Name: "test"},
-	}
+			go func() {
+				time.Sleep(tc.sleep)
+				u.Stop()
+			}()
 
-	u.ip = "127.0.0.1"
+			err := u.Start(context.Background())
 
-	errSync := u.syncRecords(allRecords)
-	if errSync != nil {
-		t.Error(errSync)
-		return
-	}
-
-	if u.storage.Records[0].Data != "127.0.0.1" {
-		t.Error("IPs should be the same", u.storage.Records[0].Data)
-		return
-	}
-	if u.storage.Records[1].Data != "127.0.0.1 and text" {
-		t.Error("IPs should be the same", u.storage.Records[1].Data)
-		return
+			is.NoErr(err)
+			is.Equal(len(tc.pm.GetIPCalls()), tc.pmGetIPCalls)
+			is.Equal(len(tc.dm.CreateCalls()), tc.dmCreateCalls)
+			is.Equal(len(tc.dm.UpdateCalls()), tc.dmUpdateCalls)
+			is.Equal(len(tc.dm.ListCalls()), tc.dmListCalls)
+		})
 	}
 }
 
-func TestSyncRecordsCreateError(t *testing.T) {
-	doT := struct{ TestDO }{}
-	doT.createRecord = func(record do.Record) (*do.Record, error) {
-		return nil, errors.New("Create error")
-	}
-
-	cf := &conf.Configuration{
-		Records: []do.Record{
-			{Type: "A", Name: "test"},
+func TestUpdaterPrepareData(t *testing.T) {
+	tcases := []struct {
+		tname    string
+		input    do.Record
+		expected string
+		params   map[string]string
+		isErr    bool
+	}{
+		{
+			tname:    "ok ip",
+			input:    do.Record{},
+			params:   make(map[string]string),
+			expected: "10.0.0.1",
 		},
-	}
-
-	u := &Updater{
-		digitalOcean: doT,
-		config:       cf,
-		storage:      cf,
-	}
-
-	allRecords := []do.Record{
-		{Type: "A", Name: "test"},
-	}
-
-	u.ip = "127.0.0.1"
-
-	errSync := u.syncRecords(allRecords)
-	if errSync == nil {
-		t.Error("Should be error, but everything is OK.")
-		return
-	}
-}
-
-func TestSyncRecordsUpdateRecord(t *testing.T) {
-	doT := struct{ TestDO }{}
-	doT.updateRecord = func(record do.Record) (*do.Record, error) {
-		return &do.Record{
-			ID:   123,
-			Type: "A",
-			Name: "test",
-			Data: record.Data,
-		}, nil
-	}
-
-	cf := &conf.Configuration{
-		Records: []do.Record{
-			{Type: "A", Name: "test"},
+		{
+			tname: "ok template ip",
+			input: do.Record{
+				Type: "TXT",
+				Data: "Hello {{.IP}}",
+			},
+			params:   make(map[string]string),
+			expected: "Hello 10.0.0.1",
 		},
-	}
-
-	u := &Updater{
-		digitalOcean: doT,
-		config:       cf,
-		storage:      cf,
-	}
-
-	allRecords := []do.Record{
-		{ID: 123, Type: "A", Name: "test"},
-	}
-
-	u.ip = "127.0.0.1"
-
-	errSync := u.syncRecords(allRecords)
-	if errSync != nil {
-		t.Error(errSync)
-		return
-	}
-
-	if cf.Records[0].Data != "127.0.0.1" {
-		t.Error("IPs should be the same", cf.Records[0].Data)
-		return
-	}
-}
-
-func TestSyncRecordsUpdateError(t *testing.T) {
-	var b bytes.Buffer
-	bw := bufio.NewWriter(&b)
-	log.SetOutput(bw)
-	defer bw.Flush()
-
-	doT := struct{ TestDO }{}
-	doT.updateRecord = func(record do.Record) (*do.Record, error) {
-		return nil, errors.New("Update error")
-	}
-
-	cf := &conf.Configuration{
-		Records: []do.Record{
-			{Type: "A", Name: "test"},
+		{
+			tname: "ok template with params",
+			input: do.Record{
+				Type: "TXT",
+				Data: "Hello {{.IP}}, {{.myprop}}",
+			},
+			params: map[string]string{
+				"myprop": "hello",
+			},
+			expected: "Hello 10.0.0.1, hello",
+		},
+		{
+			tname: "failed to parse the template",
+			input: do.Record{
+				Type: "TXT",
+				Data: "Hello {{.IP}}, {{.myprop}",
+			},
+			params: make(map[string]string),
+			isErr:  true,
 		},
 	}
 
 	u := &Updater{
-		digitalOcean: doT,
-		config:       cf,
-		storage:      cf,
+		ip: "10.0.0.1",
+	}
+	for _, tc := range tcases {
+		t.Run(tc.tname, func(t *testing.T) {
+			is := is.New(t)
+
+			v, err := u.prepareData(tc.input, tc.params)
+
+			if tc.isErr {
+				if err == nil {
+					is.Fail()
+				}
+				return
+			}
+
+			is.Equal(v, tc.expected)
+			is.NoErr(err)
+		})
 	}
 
-	allRecords := []do.Record{
-		{ID: 123, Type: "A", Name: "test"},
-	}
-
-	u.ip = "127.0.0.1"
-
-	errSync := u.syncRecords(allRecords)
-	if errSync == nil {
-		t.Error("Should be error, but everything is OK.")
-		return
-	}
-}
-
-func TestCheckAndUpdateOnlyCheck(t *testing.T) {
-	provT := struct{ TestProvider }{}
-	provT.getIP = func() (string, error) {
-		return "127.0.0.3", nil
-	}
-
-	p := ipprovider.New()
-	p.Register(provT)
-
-	doT := struct{ TestDO }{}
-	doT.updateRecord = func(record do.Record) (*do.Record, error) {
-		return &do.Record{
-			ID:   124,
-			Type: "TXT",
-			Name: "neo",
-			Data: record.Data,
-		}, nil
-	}
-
-	cf := &conf.Configuration{
-		Records: []do.Record{
-			{Type: "A", Name: "test"},
-		},
-	}
-
-	u := &Updater{
-		ipprovider:   p,
-		digitalOcean: doT,
-		config:       cf,
-		storage:      cf,
-	}
-
-	u.ip = "127.0.0.1"
-
-	errCheck := u.checkAndUpdate()
-	if errCheck != nil {
-		t.Error(errCheck)
-		return
-	}
-}
-
-func TestCheckAndUpdateOnlyUpdate(t *testing.T) {
-	var b bytes.Buffer
-	bw := bufio.NewWriter(&b)
-	log.SetOutput(bw)
-	defer bw.Flush()
-
-	doT := struct{ TestDO }{}
-	doT.updateRecord = func(record do.Record) (*do.Record, error) {
-		return &do.Record{
-			ID:   123,
-			Type: "A",
-			Name: "test",
-			Data: record.Data,
-		}, nil
-	}
-
-	provT := struct{ TestProvider }{}
-	provT.getIP = func() (string, error) {
-		return "127.0.0.3", nil
-	}
-
-	p := ipprovider.New()
-	p.Register(provT)
-
-	cf := &conf.Configuration{
-		Records: []do.Record{
-			{Type: "A", Name: "test"},
-			{Type: "TXT", Name: "test", Data: "{{.IP}} is {{.foo}}"},
-		},
-	}
-
-	cf.Params = map[string]string{}
-	cf.Params["foo"] = "bar"
-
-	u := &Updater{
-		ipprovider:   p,
-		digitalOcean: doT,
-		config:       cf,
-		storage:      cf,
-		ip:           "127.0.0.1",
-	}
-
-	errUpdate := u.checkAndUpdate()
-	if errUpdate != nil {
-		t.Error(errUpdate)
-		return
-	}
-}
-
-func TestCheckAndUpdateError(t *testing.T) {
-	var b bytes.Buffer
-	bw := bufio.NewWriter(&b)
-	log.SetOutput(bw)
-	defer bw.Flush()
-
-	doT := struct{ TestDO }{}
-	doT.updateRecord = func(record do.Record) (*do.Record, error) {
-		return nil, errors.New("Update Error")
-	}
-
-	provT := struct{ TestProvider }{}
-	provT.getIP = func() (string, error) {
-		return "127.0.0.3", nil
-	}
-
-	p := ipprovider.New()
-	p.Register(provT)
-
-	cf := &conf.Configuration{
-		Records: []do.Record{
-			{Type: "A", Name: "test"},
-		},
-	}
-
-	u := &Updater{
-		ipprovider:   p,
-		digitalOcean: doT,
-		config:       cf,
-		storage:      cf,
-		ip:           "127.0.0.1",
-	}
-
-	errUpdate := u.checkAndUpdate()
-	if errUpdate == nil {
-		t.Error("Should be error, but everything is OK")
-		return
-	}
 }

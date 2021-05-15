@@ -1,147 +1,75 @@
 package notifier
 
 import (
-	"crypto/tls"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
-	"net/smtp"
-	"os"
+	"net/mail"
 
+	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/gomail.v2"
 )
 
-var smtpTmpl = "From: %s\nTo: %s\nSubject: %s\n\n%s"
-
-// SMTPConfig is a structure for SMTPConfig configuration
-type SMTPConfig struct {
-	Host       string `json:"host"`
-	Port       string `json:"port"`
-	User       string `json:"user"`
-	Password   string `json:"password"`
-	To         string `json:"to"`
-	Subject    string `json:"subject"`
-	Secure     bool   `json:"secure"`
-	send       func(string, smtp.Auth, string, []string, []byte) error
-	errorW     io.Writer
-	serverName string
+// smtpHook is a structure for smtpHook configuration
+type smtpHook struct {
+	Host       string
+	Port       int
+	User       string
+	Password   string
+	From       string
+	To         string
+	Subject    string
+	senderFunc func() (gomail.SendCloser, error)
 }
 
-// initSMTPNotifier initializes SMTPConfig structure.
-func initSMTPNotifier(cfg interface{}) (*SMTPConfig, error) {
-
-	// because in YAML we can have keys of complex type, they are usually of type
-	// map[interface{}]interface{}. In case for this hook we are interesting to convert
-	// it to map[string]string.
-	originalCfg, ok := cfg.(map[interface{}]interface{})
-	if !ok {
-		return nil, errors.New("not converted passed configuration")
+// newSMTPHook initializes SMTPConfig structure.
+func newSMTPHook(cfg interface{}) (*smtpHook, error) {
+	var hook smtpHook
+	if err := mapstructure.Decode(cfg, &hook); err != nil {
+		return nil, fmt.Errorf("failed to decode configuration: %v", err)
 	}
-	m2 := make(map[string]interface{})
 
-	for key, value := range originalCfg {
-		switch key := key.(type) {
-		case string:
-			m2[key] = value
-		default:
-			return nil, errors.New("all keys should be strings in YAML")
+	if _, err := mail.ParseAddress(hook.From); err != nil {
+		return nil, fmt.Errorf("failed to parse from address: %w", err)
+	}
+
+	if _, err := mail.ParseAddress(hook.To); err != nil {
+		return nil, fmt.Errorf("failed to parse to address: %w", err)
+	}
+
+	hook.senderFunc = func() (gomail.SendCloser, error) {
+		d := gomail.NewDialer(hook.Host, hook.Port, hook.User, hook.Password)
+		s, err := d.Dial()
+		if err != nil {
+			return nil, err
 		}
+
+		return s, nil
 	}
 
-	// here we mashalling-unmarshalling to fill structure with correct values
-	b, errMarshal := json.Marshal(m2)
-	if errMarshal != nil {
-		return nil, errMarshal
-	}
-
-	var s SMTPConfig
-	errUnm := json.Unmarshal(b, &s)
-	if errUnm != nil {
-		return nil, errUnm
-	}
-
-	// we are not using smtp.SendMail directly, because we want to test
-	// Fire() method
-	s.send = smtp.SendMail
-	s.errorW = os.Stdout
-	s.serverName = s.Host + ":" + s.Port
-
-	return &s, nil
-}
-
-// sendSecure sends SMTP with SSL
-func (s *SMTPConfig) sendSecure(auth smtp.Auth, msg string) error {
-	tlsconfig := &tls.Config{
-		InsecureSkipVerify: true,
-		ServerName:         s.serverName,
-	}
-
-	conn, errDial := tls.Dial("tcp", s.serverName, tlsconfig)
-	if errDial != nil {
-		return errDial
-	}
-	defer conn.Close()
-
-	smptClient, errClient := smtp.NewClient(conn, s.Host)
-	if errClient != nil {
-		return errClient
-	}
-
-	if errAuth := smptClient.Auth(auth); errAuth != nil {
-		return errAuth
-	}
-
-	if errMail := smptClient.Mail(s.User); errMail != nil {
-		return errMail
-	}
-	if errRcpt := smptClient.Rcpt(s.To); errRcpt != nil {
-		return errRcpt
-	}
-	w, errData := smptClient.Data()
-	if errData != nil {
-		return errData
-	}
-	defer w.Close()
-
-	w.Write([]byte(msg))
-	smptClient.Quit()
-
-	return nil
+	return &hook, nil
 }
 
 // Fire fires hook
-func (s *SMTPConfig) Fire(entry *logrus.Entry) error {
-	// ignoring recording of events on DEBUG
-	if entry.Level == logrus.DebugLevel {
-		return nil
+func (hook *smtpHook) Fire(entry *logrus.Entry) error {
+	m := gomail.NewMessage()
+	m.SetHeader("From", hook.From)
+	m.SetHeader("To", hook.To)
+	m.SetHeader("Subject", hook.Subject)
+	m.SetBody("text/html", entry.Message)
+	s, err := hook.senderFunc()
+	if err != nil {
+		return err
 	}
+	defer s.Close()
 
-	auth := smtp.PlainAuth("", s.User, s.Password, s.Host)
-	msg := fmt.Sprintf(smtpTmpl, s.User, s.To, s.Subject, entry.Message)
-
-	// if it is SSL connection, send secure
-	if s.Secure {
-		errSend := s.sendSecure(auth, msg)
-		if errSend != nil {
-			fmt.Fprintf(s.errorW, "unable to send email: %v\n", errSend)
-			return errSend
-		}
-
-		return nil
-	}
-
-	errSend := s.send(s.Host+":"+s.Port, auth, s.User, []string{s.To}, []byte(msg))
-
-	if errSend != nil {
-		fmt.Fprintf(s.errorW, "unable to send email: %v\n", errSend)
-		return errSend
+	if err := gomail.Send(s, m); err != nil {
+		return err
 	}
 
 	return nil
 }
 
 // Levels return array of levels
-func (s *SMTPConfig) Levels() []logrus.Level {
-	return logrus.AllLevels
+func (hook *smtpHook) Levels() []logrus.Level {
+	return AllowedLevels()
 }

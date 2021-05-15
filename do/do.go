@@ -2,157 +2,156 @@ package do
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/skibish/ddns/misc"
 )
 
-var name = "digitalocean"
-
-var url = "https://api.digitalocean.com/v2"
-
-// ErrorRequest is returned when some request failed
-var ErrorRequest = errors.New("request Failed")
-
 // Record describe record structure
 type Record struct {
-	ID   uint64 `json:"id"`
-	Type string `yaml:"type" json:"type"`
-	Name string `yaml:"name" json:"name"`
-	Data string `json:"data"`
+	ID       uint64 `json:"id"`
+	Type     string `json:"type"`
+	Name     string `json:"name"`
+	Data     string `json:"data"`
+	TTL      uint64 `json:"ttl,omitempty"`
+	Priority uint64 `json:"priority,omitempty"`
+	Port     uint64 `json:"port,omitempty"`
+	Weight   uint64 `json:"weight,omitempty"`
+	Flags    uint64 `json:"flags,omitempty"`
+	Tag      string `json:"tag,omitempty"`
 }
 
 type domainRecords struct {
 	Records []Record `json:"domain_records"`
 }
 
-type domainRecord struct {
-	Record Record `json:"domain_record"`
+// DomainsService is an interface to interact with DNS records.
+type DomainsService interface {
+	List(context.Context, string) ([]Record, error)
+	Create(context.Context, string, Record) error
+	Update(context.Context, string, Record) error
 }
 
-// DigitalOceanInterface should be implemented by DigitalOcean
-type DigitalOceanInterface interface {
-	GetDomainRecords() ([]Record, error)
-	CreateRecord(record Record) (*Record, error)
-	UpdateRecord(record Record) (*Record, error)
-}
-
-// DigitalOcean is a main structure (implements DigitalOceanIterface)
+// DigitalOcean hold
 type DigitalOcean struct {
-	c      *http.Client
-	token  string
-	domain string
+	c       *http.Client
+	token   string
+	url     string
+	timeout time.Duration
 }
 
-// New return instance of DigitalOcean
-func New(domain, token string, c *http.Client) *DigitalOcean {
+// New return instance of DigitalOcean.
+func New(token string, timeout time.Duration) *DigitalOcean {
 	return &DigitalOcean{
-		domain: domain,
-		token:  token,
-		c:      c,
+		token:   token,
+		c:       &http.Client{},
+		url:     "https://api.digitalocean.com/v2",
+		timeout: timeout,
 	}
 }
 
-// GetDomainRecords return domain records
-func (d *DigitalOcean) GetDomainRecords() ([]Record, error) {
-	req, errNR := d.prepareRequest("GET", fmt.Sprintf("%s/domains/%s/records", url, d.domain), nil)
-	if errNR != nil {
-		return nil, fmt.Errorf("%s: %s", name, errNR.Error())
+// List return domain DNS records.
+func (d *DigitalOcean) List(ctx context.Context, domain string) ([]Record, error) {
+	req, err := d.prepareRequest(http.MethodGet, fmt.Sprintf("/domains/%s/records", domain), nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare a request: %w", err)
 	}
 
-	res, errDo := d.c.Do(req)
-	if errDo != nil {
-		return nil, fmt.Errorf("%s: %s", name, errDo.Error())
+	ctx, cancel := context.WithTimeout(ctx, d.timeout)
+	defer cancel()
+
+	req = req.WithContext(ctx)
+
+	res, err := d.c.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to do a request: %w", err)
 	}
 
 	defer res.Body.Close()
 
 	if !misc.Success(res.StatusCode) {
-		return nil, fmt.Errorf("%s: %s", name, ErrorRequest.Error())
+		return nil, fmt.Errorf("unexpected response with status code %d", res.StatusCode)
 	}
 
 	var records domainRecords
-	errDecode := json.NewDecoder(res.Body).Decode(&records)
-	if errDecode != nil {
-		return nil, fmt.Errorf("%s: %s", name, errDecode.Error())
+	if err := json.NewDecoder(res.Body).Decode(&records); err != nil {
+		return nil, fmt.Errorf("failed to decode the response: %w", err)
 	}
 
 	return records.Records, nil
 }
 
-// CreateRecord create record
-func (d *DigitalOcean) CreateRecord(record Record) (*Record, error) {
-	body, errMarsh := json.Marshal(record)
-	if errMarsh != nil {
-		return nil, fmt.Errorf("%s: %s", name, errMarsh.Error())
+// Create creates DNS record.
+func (d *DigitalOcean) Create(ctx context.Context, domain string, record Record) error {
+	body, err := json.Marshal(record)
+	if err != nil {
+		return fmt.Errorf("failed to marshal the record: %w", err)
 	}
 
-	req, errNR := d.prepareRequest("POST", fmt.Sprintf("%s/domains/%s/records", url, d.domain), bytes.NewBuffer(body))
-	if errNR != nil {
-		return nil, fmt.Errorf("%s: %s", name, errNR.Error())
+	req, err := d.prepareRequest(http.MethodPost, fmt.Sprintf("/domains/%s/records", domain), bytes.NewBuffer(body))
+	if err != nil {
+		return fmt.Errorf("failed to prepare a request: %w", err)
 	}
 
-	res, errDo := d.c.Do(req)
-	if errDo != nil {
-		return nil, fmt.Errorf("%s: %s", name, errDo.Error())
-	}
+	ctx, cancel := context.WithTimeout(ctx, d.timeout)
+	defer cancel()
 
-	defer res.Body.Close()
+	req = req.WithContext(ctx)
 
-	if !misc.Success(res.StatusCode) {
-		return nil, fmt.Errorf("%s: %s", name, ErrorRequest.Error())
-	}
-
-	var resRecord domainRecord
-	errDecode := json.NewDecoder(res.Body).Decode(&resRecord)
-	if errDecode != nil {
-		return nil, fmt.Errorf("%s: %s", name, errDecode.Error())
-	}
-
-	return &resRecord.Record, nil
-}
-
-// UpdateRecord updates record
-func (d *DigitalOcean) UpdateRecord(record Record) (*Record, error) {
-	body, errMarsh := json.Marshal(record)
-	if errMarsh != nil {
-		return nil, fmt.Errorf("%s: %s", name, errMarsh.Error())
-	}
-
-	req, errNR := d.prepareRequest("PUT", fmt.Sprintf("%s/domains/%s/records/%d", url, d.domain, record.ID), bytes.NewBuffer(body))
-	if errNR != nil {
-		return nil, fmt.Errorf("%s: %s", name, errNR.Error())
-	}
-
-	res, errDo := d.c.Do(req)
-	if errDo != nil {
-		return nil, fmt.Errorf("%s: %s", name, errDo.Error())
+	res, err := d.c.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to do a request: %w", err)
 	}
 
 	defer res.Body.Close()
 
 	if !misc.Success(res.StatusCode) {
-		return nil, fmt.Errorf("%s: %s", name, ErrorRequest.Error())
+		return fmt.Errorf("unexpected response with status code %d", res.StatusCode)
 	}
 
-	var resRecord domainRecord
-	errDecode := json.NewDecoder(res.Body).Decode(&resRecord)
-	if errDecode != nil {
-		return nil, fmt.Errorf("%s: %s", name, errDecode.Error())
-	}
-
-	return &resRecord.Record, nil
+	return nil
 }
 
-// prepareRequest bootstrap request with needed information
-func (d *DigitalOcean) prepareRequest(method, url string, body io.Reader) (*http.Request, error) {
-	req, errNR := http.NewRequest(method, url, body)
-	if errNR != nil {
-		return nil, errNR
+// Update updates DNS record.
+func (d *DigitalOcean) Update(ctx context.Context, domain string, record Record) error {
+	body, err := json.Marshal(record)
+	if err != nil {
+		return fmt.Errorf("failed to marshal the record %w", err)
+	}
+
+	req, err := d.prepareRequest(http.MethodPut, fmt.Sprintf("/domains/%s/records/%d", domain, record.ID), bytes.NewBuffer(body))
+	if err != nil {
+		return fmt.Errorf("failed to prepare a request: %w", err)
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, d.timeout)
+	defer cancel()
+
+	req = req.WithContext(ctx)
+
+	res, err := d.c.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to do a request: %w", err)
+	}
+
+	defer res.Body.Close()
+
+	if !misc.Success(res.StatusCode) {
+		return fmt.Errorf("unexpected response with status code %d", res.StatusCode)
+	}
+
+	return nil
+}
+
+func (d *DigitalOcean) prepareRequest(method, path string, body io.Reader) (*http.Request, error) {
+	req, err := http.NewRequest(method, d.url+path, body)
+	if err != nil {
+		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", d.token))

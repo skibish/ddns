@@ -1,90 +1,70 @@
 package notifier
 
 import (
-	"bufio"
-	"bytes"
-	"errors"
+	"net/http"
 	"testing"
 
+	"github.com/matryer/is"
 	"github.com/sirupsen/logrus"
 )
 
-func TestTelegramInit(t *testing.T) {
-	_, errConv := initTelegramNotifier("cfg")
-	if errConv == nil {
-		t.Error("Should be conversion error, but got nothing")
-		return
+func TestTelegramHookNew(t *testing.T) {
+	is := is.New(t)
+
+	if _, err := newTelegramHook("cfg"); err == nil {
+		is.Fail() // should be error, but got nothing
 	}
 
 	m := make(map[interface{}]interface{})
-	m["chat_id"] = 123
-	_, errValue := initTelegramNotifier(m)
-	if errValue == nil {
-		t.Errorf("Should be error, because value is not a string")
-		return
-	}
-
-	m = make(map[interface{}]interface{})
-	m[123] = "123"
-	_, errKey := initTelegramNotifier(m)
-	if errKey == nil {
-		t.Errorf("Should be error, because key is not a string")
-		return
-	}
-
-	m = make(map[interface{}]interface{})
 	m["chat_id"] = "123"
-	tg, errUnexpected := initTelegramNotifier(m)
-	if errUnexpected != nil {
-		t.Error(errUnexpected)
-		return
-	}
+	m["token"] = "tokenv"
 
-	if tg.ChatID != "123" {
-		t.Errorf("User should be %q, but got %q", "123", tg.ChatID)
-		return
-	}
+	hook, err := newTelegramHook(m)
 
+	is.NoErr(err)
+	is.Equal(hook.ChatID, "123")
+	is.Equal(hook.Token, "tokenv")
 }
 
-func TestTelegramFire(t *testing.T) {
-
-	var b bytes.Buffer
-	writer := bufio.NewWriter(&b)
-
-	tg := TelegramConfig{
-		Token:  "aaaa",
-		ChatID: "1234",
-		errorW: writer,
+func TestTelegramHookFire(t *testing.T) {
+	tcases := []struct {
+		tname      string
+		statusCode int
+		isErr      bool
+	}{
+		{"ok", http.StatusOK, false},
+		{"fail do", http.StatusTeapot, true},
+		{"fail status", http.StatusTeapot, true},
 	}
 
-	tg.send = func(msg string) error {
-		return nil
-	}
+	for _, tc := range tcases {
+		t.Run(tc.tname, func(t *testing.T) {
+			is := is.New(t)
 
-	entry := logrus.Entry{Message: "awesome message", Level: logrus.InfoLevel}
-	errFire := tg.Fire(&entry)
-	if errFire != nil {
-		t.Errorf("handled an error on Telegram request: %q", errFire.Error())
-		return
-	}
+			url, close := httpHelper(t, tc.tname, nil, tc.statusCode)
+			defer close()
 
-	// test, got some error from Telegram
-	tg.send = func(string) error {
-		return errors.New("something went wrong")
-	}
+			hook, err := newTelegramHook(map[string]interface{}{
+				"chat_id": "someid",
+				"token":   "1234",
+			})
+			is.NoErr(err)
 
-	errFire = tg.Fire(&entry)
-	if errFire == nil {
-		t.Error("Should be error, but it's OK")
-		return
-	}
+			hook.host = url
+			if tc.tname == "fail do" {
+				hook.host = " "
+			}
 
-	// test, DEBUG is ignored
-	entry = logrus.Entry{Message: "ignored", Level: logrus.DebugLevel}
-	shouldBeNil := tg.Fire(&entry)
-	if shouldBeNil != nil {
-		t.Errorf("Expected nil, on DEBUG, but got %v", shouldBeNil)
-		return
+			entry := logrus.Entry{Message: tc.tname, Level: logrus.InfoLevel}
+			err = hook.Fire(&entry)
+
+			if tc.isErr {
+				if err == nil {
+					t.Fail() // should be error
+				}
+				return
+			}
+			is.NoErr(err)
+		})
 	}
 }

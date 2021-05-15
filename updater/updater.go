@@ -2,12 +2,11 @@ package updater
 
 import (
 	"bytes"
-	"errors"
+	"context"
+	"fmt"
 	"html/template"
-	"net/http"
 	"time"
 
-	"github.com/mitchellh/copystructure"
 	"github.com/skibish/ddns/conf"
 
 	log "github.com/sirupsen/logrus"
@@ -15,175 +14,162 @@ import (
 	"github.com/skibish/ddns/ipprovider"
 )
 
-// Updater is responsible for updating DNS records if IP has changed
+//go:generate moq -out do_moq_test.go -pkg updater ../do DomainsService
+//go:generate moq -out ipprovider_moq_test.go -pkg updater ../ipprovider Provider
+
+// Updater is responsible for DNS records updates.
 type Updater struct {
-	ip           string
-	updateTick   time.Duration
-	digitalOcean do.DigitalOceanInterface
-	ipprovider   *ipprovider.IPProvider
-	storage      *conf.Configuration
-	config       *conf.Configuration
+	ip         string
+	ticker     *time.Ticker
+	do         do.DomainsService
+	ipprovider ipprovider.Provider
+	config     *conf.Configuration
+	shutdown   chan bool
 }
 
 // New return new Updater.
-func New(hc *http.Client, ipprovider *ipprovider.IPProvider, cfg *conf.Configuration, domain string, updateTick time.Duration) (u *Updater, err error) {
+func New(cfg *conf.Configuration) *Updater {
+	return &Updater{
+		ticker:     time.NewTicker(cfg.CheckPeriod),
+		do:         do.New(cfg.Token, cfg.RequestTimeout),
+		ipprovider: ipprovider.New(cfg.IPv6, cfg.RequestTimeout),
+		shutdown:   make(chan bool),
+		config:     cfg,
+	}
+}
 
-	u = &Updater{
-		updateTick:   updateTick,
-		digitalOcean: do.New(domain, cfg.Token, hc),
-		ipprovider:   ipprovider,
+// Start starts the updater process.
+func (u *Updater) Start(ctx context.Context) (err error) {
+	log.Debug("initializing ip")
+
+	if _, err := u.ipUpdated(ctx); err != nil {
+		return fmt.Errorf("failed to initialize ip: %w", err)
 	}
 
-	// configuration and storage have same structure for simplicity
-	copyForStorage, err := copystructure.Copy(cfg)
+	log.Infof("current ip is %s", u.ip)
+
+	log.Debug("syncing dns records")
+	if err := u.sync(ctx); err != nil {
+		return fmt.Errorf("failed to sync dns records: %w", err)
+	}
+	log.Debug("done")
+
+	// perform IP checks in intervals
+	for {
+		select {
+		case <-u.ticker.C:
+			log.Debugf("checking if ip (%s) has been updated", u.ip)
+
+			updated, err := u.ipUpdated(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to get ip: %w", err)
+			}
+
+			if !updated {
+				continue
+			}
+			log.Infof("ip has been updated to %s", u.ip)
+
+			log.Debug("updating dns records", u.ip)
+			if err := u.sync(ctx); err != nil {
+				return fmt.Errorf("failed to update dns records: %w", err)
+			}
+			log.Debug("done")
+		case <-u.shutdown:
+			return nil
+		}
+	}
+}
+
+// Stops stops the updater.
+func (u *Updater) Stop() {
+	u.ticker.Stop()
+	u.shutdown <- true
+}
+
+// ipUpdated returns true and updates IP to a new value if IP changed.
+func (u *Updater) ipUpdated(ctx context.Context) (bool, error) {
+	newIP, err := u.ipprovider.GetIP(ctx)
 	if err != nil {
-		return
+		return false, err
 	}
 
-	var ok bool
-	u.storage, ok = copyForStorage.(*conf.Configuration)
-	if !ok {
-		return nil, errors.New("failed to convert interface{} to conf.Configuration")
+	if u.ip == newIP {
+		return false, nil
 	}
-	u.config = cfg
 
-	return
+	u.ip = newIP
+
+	return true, nil
 }
 
-// Start starts the updater process goroutine
-func (u *Updater) Start() (err error) {
-	// get current IP
-	u.ip = u.ipprovider.GetIP()
-	if u.ip == "" {
-		return errors.New("IP can't be empty in the beginning... Do you have internet connection?")
-	}
-	log.Infof("Current IP is %q", u.ip)
-
-	// do request to the digital ocean API for list of records
-	allRecords, err := u.digitalOcean.GetDomainRecords()
-	if err != nil {
-		return err
-	}
-
-	// do initial sync of records
-	err = u.syncRecords(allRecords)
-	if err != nil {
-		return err
-	}
-
-	periodC := time.NewTicker(u.updateTick).C
-
-	// start main process
-	go func() {
-		// for defined period of time, perform IP check
-		for range periodC {
-			errCheck := u.checkAndUpdate()
-			if errCheck != nil {
-				log.Errorf("failed to update: %s", errCheck.Error())
-			}
-		}
-
-	}()
-
-	return
+// match checks if records are the same
+func match(a, b do.Record) bool {
+	return a.Type == b.Type && a.Name == b.Name
 }
 
-// syncRecords perform initial sync between what we provided
-// in configuration and what already exist in DNS records
-func (u *Updater) syncRecords(allRecords []do.Record) error {
-	cRec := len(u.storage.Records)
-	cAllRec := len(allRecords)
-	for i := 0; i < cRec; i++ {
-		for j := 0; j < cAllRec; j++ {
-
-			// we are only interested in those who have full match
-			// by `type AND name`
-			if u.storage.Records[i].Type == allRecords[j].Type &&
-				u.storage.Records[i].Name == allRecords[j].Name {
-				u.storage.Records[i] = allRecords[j]
-				break
-			}
-		}
-
-		// if there was no match, we should create new DNS record
-		// and update current configuration
-		if u.storage.Records[i].ID == 0 {
-			// if there is not template in configuration, set current IP as data,
-			// otherwise parse data and fill template with provided params
-			errUpdStorage := u.updateStorage(&u.storage.Records[i], &u.config.Records[i], u.config.Params)
-			if errUpdStorage != nil {
-				return errUpdStorage
-			}
-
-			newR, errCreate := u.digitalOcean.CreateRecord(u.storage.Records[i])
-			if errCreate != nil {
-				return errCreate
-			}
-
-			u.storage.Records[i] = *newR
-		}
-
-		// if IPs are different, update record
-		if u.storage.Records[i].Data != u.ip {
-			errUpdStorage := u.updateStorage(&u.storage.Records[i], &u.config.Records[i], u.config.Params)
-			if errUpdStorage != nil {
-				return errUpdStorage
-			}
-
-			newR, errUpdate := u.digitalOcean.UpdateRecord(u.storage.Records[i])
-			if errUpdate != nil {
-				return errUpdate
-			}
-
-			u.storage.Records[i] = *newR
+// search searches for a record in records.
+// If success, returns record ID which is not 0.
+func (u *Updater) search(records []do.Record, record do.Record) uint64 {
+	for _, r := range records {
+		if match(record, r) {
+			return r.ID
 		}
 	}
 
-	return nil
+	return 0
 }
 
-// checkAndUpdate check for new IP and if it has been changed,
-// trigger the update of the DNS records
-func (u *Updater) checkAndUpdate() error {
-	log.Debug("IP check")
-	newIP := u.ipprovider.GetIP()
-
-	if u.ip != newIP {
-		log.Infof("IP has changed from %q to %q", u.ip, newIP)
-		u.ip = newIP
-
-		cRec := len(u.storage.Records)
-		for i := 0; i < cRec; i++ {
-			errUpdStorage := u.updateStorage(&u.storage.Records[i], &u.config.Records[i], u.storage.Params)
-			if errUpdStorage != nil {
-				return errUpdStorage
-			}
-
-			newR, errUpdate := u.digitalOcean.UpdateRecord(u.storage.Records[i])
-			if errUpdate != nil {
-				return errUpdate
-			}
-
-			u.storage.Records[i] = *newR
-		}
-	}
-
-	return nil
-}
-
-// updateStorage updates the storage based on data in configuration
-func (u *Updater) updateStorage(storageRecord, configRecord *do.Record, params map[string]string) (err error) {
-	if configRecord.Data == "" {
-		storageRecord.Data = u.ip
-	} else {
-		params["IP"] = u.ip
-		t := template.Must(template.New("t1").Parse(configRecord.Data))
-		buf := new(bytes.Buffer)
-		err = t.Execute(buf, params)
+// sync syncs DNS records.
+func (u *Updater) sync(ctx context.Context) error {
+	for domain := range u.config.Domains {
+		records, err := u.do.List(ctx, domain)
 		if err != nil {
-			return
+			return fmt.Errorf("failed to get the records for the domain %s: %w", domain, err)
 		}
-		storageRecord.Data = buf.String()
+
+		for _, r := range u.config.Domains[domain] {
+			r.Data, err = u.prepareData(r, u.config.Params)
+			if err != nil {
+				return fmt.Errorf("failed to set data to the record %s of the domain %s: %w", domain, r.Type, err)
+			}
+
+			recordID := u.search(records, r)
+			if recordID == 0 {
+				if err := u.do.Create(ctx, domain, r); err != nil {
+					return fmt.Errorf("failed to create a record for the domain %s: %w", domain, err)
+				}
+				continue
+			}
+
+			r.ID = recordID
+			if err := u.do.Update(ctx, domain, r); err != nil {
+				return fmt.Errorf("failed to update a record for the domain %s: %w", domain, err)
+			}
+		}
 	}
-	return
+
+	return nil
+}
+
+// prepareData executes template and return what should be set in the DNS record data field.
+// It can be just an IP or some string.
+func (u *Updater) prepareData(configRecord do.Record, params map[string]string) (string, error) {
+	if configRecord.Data == "" {
+		return u.ip, nil
+	}
+
+	params["IP"] = u.ip
+
+	t, err := template.New("t1").Parse(configRecord.Data)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse the template: %w", err)
+	}
+
+	buf := new(bytes.Buffer)
+	if err := t.Execute(buf, params); err != nil {
+		return "", fmt.Errorf("failed to execute a template: %w", err)
+	}
+
+	return buf.String(), nil
 }

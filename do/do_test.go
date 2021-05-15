@@ -1,276 +1,263 @@
 package do
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
+
+	"github.com/matryer/is"
 )
 
-func TestGetDomainRecordsSuccess(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
+func httpHelper(t *testing.T, reqMethod, path, res string, resCode int) (string, func()) {
+	is := is.New(t)
+	is.Helper()
 
-		if r.Header.Get("Authorization") != "Bearer amazingtoken" {
-			t.Error("Not correct Authorization value")
-			return
-		}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
 
-		if r.Method != "GET" {
-			t.Errorf("Method should be GET, got %s instead", r.Method)
-			return
-		}
+		is.Equal(r.Header.Get("Authorization"), "Bearer amazingtoken")
+		is.Equal(r.Method, reqMethod)
+		is.Equal(r.URL.Path, path)
 
-		if r.URL.Path != "/domains/example.com/records" {
-			t.Errorf("Expected path /domains/example.com/records, got %s", r.URL.Path)
-			return
-		}
+		w.WriteHeader(resCode)
+		w.Write([]byte(res))
+	}))
 
-		w.Write([]byte(`{
-  "domain_records": [
-    {
-      "id": 3352895,
-      "type": "A",
-      "name": "@",
-      "data": "1.2.3.4",
-      "priority": null,
-      "port": null,
-      "weight": null
-    }
-  ]
-}`))
+	return server.URL, server.Close
+}
+
+func TestList(t *testing.T) {
+	t.Parallel()
+
+	is := is.New(t)
+
+	tcases := []struct {
+		tname      string
+		method     string
+		path       string
+		doResponse string
+		status     int
+		isErr      bool
+		timeout    time.Duration
+	}{
+		{
+			tname:      "req 200",
+			method:     http.MethodGet,
+			path:       "/domains/example.com/records",
+			doResponse: `{"domain_records":[{"id": 3352895,"type": "A","name": "@","data": "1.2.3.4","priority": null,"port": null,"weight": null}]}`,
+			status:     http.StatusOK,
+			isErr:      false,
+			timeout:    1 * time.Second,
+		},
+		{
+			tname:   "req 500",
+			method:  http.MethodGet,
+			path:    "/domains/example.com/records",
+			status:  http.StatusInternalServerError,
+			isErr:   true,
+			timeout: 1 * time.Second,
+		},
+		{
+			tname:   "fail to parse DO response",
+			method:  http.MethodGet,
+			path:    "/domains/example.com/records",
+			status:  http.StatusOK,
+			isErr:   true,
+			timeout: 1 * time.Second,
+		},
+		{
+			tname:      "fail to make a request",
+			method:     http.MethodGet,
+			path:       "/domains/example.com/records",
+			doResponse: `fail`,
+			status:     http.StatusOK,
+			isErr:      true,
+			timeout:    1 * time.Second,
+		},
 	}
 
-	server := httptest.NewServer(http.HandlerFunc(handler))
-	defer server.Close()
+	for _, tc := range tcases {
+		t.Run(tc.tname, func(t *testing.T) {
+			url, close := httpHelper(t, tc.method, tc.path, tc.doResponse, tc.status)
+			defer close()
 
-	url = server.URL
+			d := New("amazingtoken", 1*time.Second)
+			d.url = url
+			if tc.doResponse == "fail" {
+				d.url = "localhost:333"
+			}
 
-	d := New("example.com", "amazingtoken", &http.Client{})
+			recs, err := d.List(context.Background(), "example.com")
+			if tc.isErr && err != nil {
+				return
+			}
 
-	recs, errGet := d.GetDomainRecords()
-	if errGet != nil {
-		t.Errorf("Got error : %s", errGet.Error())
-		return
-	}
-
-	if recs[0].ID != 3352895 {
-		t.Error("Got not correct response")
-		return
+			is.NoErr(err)
+			is.True(strings.Contains(tc.doResponse, recs[0].Name))
+		})
 	}
 }
 
-func TestGetDomainRecordsIncorrectStatusCode(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(400)
-		w.Write([]byte(``))
+func TestCreate(t *testing.T) {
+	t.Parallel()
+
+	is := is.New(t)
+
+	tcases := []struct {
+		tname      string
+		method     string
+		path       string
+		doResponse string
+		status     int
+		isErr      bool
+		timeout    time.Duration
+	}{
+		{
+			tname:   "req 200",
+			method:  http.MethodPost,
+			path:    "/domains/example.com/records",
+			status:  http.StatusOK,
+			isErr:   false,
+			timeout: 1 * time.Second,
+		},
+		{
+			tname:   "req 500",
+			method:  http.MethodPost,
+			path:    "/domains/example.com/records",
+			status:  http.StatusInternalServerError,
+			isErr:   true,
+			timeout: 1 * time.Second,
+		},
+		{
+			tname:   "fail to parse DO response",
+			method:  http.MethodPost,
+			path:    "/domains/example.com/records",
+			status:  http.StatusOK,
+			isErr:   true,
+			timeout: 1 * time.Second,
+		},
+		{
+			tname:      "fail to make a request",
+			method:     http.MethodPost,
+			path:       "/domains/example.com/records",
+			doResponse: `fail`,
+			status:     http.StatusOK,
+			isErr:      true,
+			timeout:    1 * time.Second,
+		},
 	}
 
-	server := httptest.NewServer(http.HandlerFunc(handler))
-	defer server.Close()
+	for _, tc := range tcases {
+		t.Run(tc.tname, func(t *testing.T) {
+			url, close := httpHelper(t, tc.method, tc.path, tc.doResponse, tc.status)
+			defer close()
 
-	url = server.URL
+			d := New("amazingtoken", 1*time.Second)
+			d.url = url
+			if tc.doResponse == "fail" {
+				d.url = "localhost:333"
+			}
+			rec := Record{
+				Type: "A",
+				Name: "@",
+				Data: "1.2.3.4",
+			}
 
-	d := New("example.com", "amazingtoken", &http.Client{})
+			err := d.Create(context.Background(), "example.com", rec)
+			if tc.isErr && err != nil {
+				return
+			}
 
-	_, errGet := d.GetDomainRecords()
-	if errGet == nil {
-		t.Error("Should be error, but everything is OK")
-		return
-	}
-}
-
-func TestGetDomainRecordsParseError(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`aaa`))
-	}
-
-	server := httptest.NewServer(http.HandlerFunc(handler))
-	defer server.Close()
-
-	url = server.URL
-
-	d := New("example.com", "amazingtoken", &http.Client{})
-
-	_, errGet := d.GetDomainRecords()
-	if errGet.Error() != "digitalocean: invalid character 'a' looking for beginning of value" {
-		t.Error("Go not expected value: ", errGet.Error())
-		return
-	}
-}
-
-func TestCreateRecordSuccess(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-
-		if r.Header.Get("Authorization") != "Bearer amazingtoken" {
-			t.Error("Not correct Authorization value")
-			return
-		}
-
-		if r.Method != "POST" {
-			t.Errorf("Method should be POST, got %s instead", r.Method)
-			return
-		}
-
-		if r.URL.Path != "/domains/example.com/records" {
-			t.Errorf("Expected path /domains/example.com/records, got %s", r.URL.Path)
-			return
-		}
-
-		w.Write([]byte(`{
-  "domain_record": {
-      "id": 3352895,
-      "type": "A",
-      "name": "@",
-      "data": "1.2.3.4",
-      "priority": null,
-      "port": null,
-      "weight": null
-    }
-}`))
-	}
-
-	server := httptest.NewServer(http.HandlerFunc(handler))
-	defer server.Close()
-
-	url = server.URL
-
-	d := New("example.com", "amazingtoken", &http.Client{})
-
-	recs, errGet := d.CreateRecord(Record{})
-	if errGet != nil {
-		t.Errorf("Got error : %s", errGet.Error())
-		return
-	}
-
-	if recs.ID != 3352895 {
-		t.Error("Got not correct response")
-		return
+			is.NoErr(err)
+		})
 	}
 }
 
-func TestCreateRecordIncorrectStatusCode(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(400)
-		w.Write([]byte(``))
+func TestUpdate(t *testing.T) {
+	t.Parallel()
+
+	is := is.New(t)
+
+	tcases := []struct {
+		tname      string
+		method     string
+		path       string
+		doResponse string
+		status     int
+		isErr      bool
+		timeout    time.Duration
+	}{
+		{
+			tname:   "req 200",
+			method:  http.MethodPut,
+			path:    "/domains/example.com/records/123",
+			status:  http.StatusOK,
+			isErr:   false,
+			timeout: 1 * time.Second,
+		},
+		{
+			tname:   "req 500",
+			method:  http.MethodPut,
+			path:    "/domains/example.com/records/123",
+			status:  http.StatusInternalServerError,
+			isErr:   true,
+			timeout: 1 * time.Second,
+		},
+		{
+			tname:   "fail to parse DO response",
+			method:  http.MethodPut,
+			path:    "/domains/example.com/records/123",
+			status:  http.StatusOK,
+			isErr:   true,
+			timeout: 1 * time.Second,
+		},
+		{
+			tname:      "fail to make a request",
+			method:     http.MethodPut,
+			path:       "/domains/example.com/records/123",
+			doResponse: "fail",
+			status:     http.StatusOK,
+			isErr:      true,
+			timeout:    1 * time.Second,
+		},
 	}
 
-	server := httptest.NewServer(http.HandlerFunc(handler))
-	defer server.Close()
+	for _, tc := range tcases {
+		t.Run(tc.tname, func(t *testing.T) {
+			url, close := httpHelper(t, tc.method, tc.path, tc.doResponse, tc.status)
+			defer close()
 
-	url = server.URL
+			d := New("amazingtoken", 1*time.Second)
+			d.url = url
+			if tc.doResponse == "fail" {
+				d.url = "localhost:333"
+			}
+			rec := Record{
+				ID:   123,
+				Type: "A",
+				Name: "@",
+				Data: "1.2.3.4",
+			}
 
-	d := New("example.com", "amazingtoken", &http.Client{})
+			err := d.Update(context.Background(), "example.com", rec)
+			if tc.isErr && err != nil {
+				return
+			}
 
-	_, errGet := d.CreateRecord(Record{})
-	if errGet == nil {
-		t.Error("Should be error, but everything is OK")
-		return
-	}
-}
-
-func TestCreateRecordParseError(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`aaa`))
-	}
-
-	server := httptest.NewServer(http.HandlerFunc(handler))
-	defer server.Close()
-
-	url = server.URL
-
-	d := New("example.com", "amazingtoken", &http.Client{})
-
-	_, errGet := d.CreateRecord(Record{})
-	if errGet.Error() != "digitalocean: invalid character 'a' looking for beginning of value" {
-		t.Error("Go not expected value: ", errGet.Error())
-		return
-	}
-}
-
-func TestUpdateRecordSuccess(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-
-		if r.Header.Get("Authorization") != "Bearer amazingtoken" {
-			t.Error("Not correct Authorization value")
-			return
-		}
-
-		if r.Method != "PUT" {
-			t.Errorf("Method should be PUT, got %s instead", r.Method)
-			return
-		}
-
-		if r.URL.Path != "/domains/example.com/records/0" {
-			t.Errorf("Expected path /domains/example.com/records/0, got %s", r.URL.Path)
-			return
-		}
-
-		w.Write([]byte(`{
-  "domain_record": {
-      "id": 3352895,
-      "type": "A",
-      "name": "@",
-      "data": "1.2.3.4",
-      "priority": null,
-      "port": null,
-      "weight": null
-    }
-}`))
-	}
-
-	server := httptest.NewServer(http.HandlerFunc(handler))
-	defer server.Close()
-
-	url = server.URL
-
-	d := New("example.com", "amazingtoken", &http.Client{})
-
-	recs, errGet := d.UpdateRecord(Record{})
-	if errGet != nil {
-		t.Errorf("Got error : %s", errGet.Error())
-		return
-	}
-
-	if recs.ID != 3352895 {
-		t.Error("Got not correct response")
-		return
+			is.NoErr(err)
+		})
 	}
 }
 
-func TestUpdateRecordIncorrectStatusCode(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(400)
-		w.Write([]byte(``))
-	}
+func TestPrepareRequest(t *testing.T) {
+	is := is.New(t)
 
-	server := httptest.NewServer(http.HandlerFunc(handler))
-	defer server.Close()
-
-	url = server.URL
-
-	d := New("example.com", "amazingtoken", &http.Client{})
-
-	_, errGet := d.UpdateRecord(Record{})
-	if errGet == nil {
-		t.Error("Should be error, but everything is OK")
-		return
-	}
-}
-
-func TestUpdateRecordParseError(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`aaa`))
-	}
-
-	server := httptest.NewServer(http.HandlerFunc(handler))
-	defer server.Close()
-
-	url = server.URL
-
-	d := New("example.com", "amazingtoken", &http.Client{})
-
-	_, errGet := d.UpdateRecord(Record{})
-	if errGet.Error() != "digitalocean: invalid character 'a' looking for beginning of value" {
-		t.Error("Go not expected value: ", errGet.Error())
-		return
+	d := New("amazingtoken", 1*time.Second)
+	_, err := d.prepareRequest("12 3", "/path", nil)
+	if err == nil {
+		is.Fail() // should error because method is incorrect
 	}
 }

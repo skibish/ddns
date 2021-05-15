@@ -2,22 +2,24 @@ package conf
 
 import (
 	"errors"
-	"io/ioutil"
-	"os"
+	"fmt"
+	"strings"
+	"time"
 
-	yaml "gopkg.in/yaml.v2"
-
+	log "github.com/sirupsen/logrus"
 	"github.com/skibish/ddns/do"
+	"github.com/spf13/viper"
 )
 
-// Configuration is a structure of the configuration
+// Configuration is a structure which holds DDNS configuration.
 type Configuration struct {
-	Token     string                 `yaml:"token"`
-	Domains   []string               `yaml:"domains"`
-	ForceIPV6 bool                   `yaml:"forceIPV6"`
-	Records   []do.Record            `yaml:"records"`
-	Notify    map[string]interface{} `yaml:"notify"`
-	Params    map[string]string      `yaml:"params"`
+	Token          string
+	IPv6           bool
+	CheckPeriod    time.Duration
+	RequestTimeout time.Duration
+	Domains        map[string][]do.Record
+	Notifications  []map[string]interface{}
+	Params         map[string]string
 }
 
 // valid checks that provided configuration is valid
@@ -31,9 +33,9 @@ func (c *Configuration) valid() error {
 	}
 
 	if len(c.Domains) > 0 {
-		for _, domain := range c.Domains {
-			if domain == "" {
-				return errors.New("domains can't be empty")
+		for domain, records := range c.Domains {
+			if len(records) == 0 {
+				return fmt.Errorf("records can't be empty for %s", domain)
 			}
 		}
 	}
@@ -44,16 +46,39 @@ func (c *Configuration) valid() error {
 // NewConfiguration read configuration file
 // and return *Configuration
 func NewConfiguration(path string) (*Configuration, error) {
-	path = os.ExpandEnv(path)
+	v := viper.NewWithOptions(
+		viper.KeyDelimiter("::"),
+		viper.EnvKeyReplacer(strings.NewReplacer("::", "_")),
+	)
 
-	file, errRead := ioutil.ReadFile(path)
-	if errRead != nil {
-		return nil, errRead
+	v.SetConfigName("ddns")
+	v.SetConfigType("yaml")
+	v.AddConfigPath(".")
+	v.AddConfigPath("$HOME")
+
+	v.SetDefault("CheckPeriod", 5*time.Minute)
+	v.SetDefault("RequestTimeout", 10*time.Second)
+	v.SetDefault("IPv6", false)
+
+	if path != "" {
+		v.SetConfigFile(path)
 	}
+
+	v.SetEnvPrefix("ddns")
+	v.AutomaticEnv()
+
+	if err := v.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			return nil, errors.New("configuration file not found")
+		} else {
+			return nil, fmt.Errorf("failed to read configuration file: %v", err)
+		}
+	}
+	log.Debugf("using the following configuration file: %s", v.ConfigFileUsed())
+
 	var cf Configuration
-	errUn := yaml.Unmarshal(file, &cf)
-	if errUn != nil {
-		return nil, errUn
+	if err := v.Unmarshal(&cf); err != nil {
+		return nil, err
 	}
 
 	errValid := cf.valid()
@@ -62,7 +87,7 @@ func NewConfiguration(path string) (*Configuration, error) {
 	}
 
 	if cf.Params == nil {
-		cf.Params = map[string]string{}
+		cf.Params = make(map[string]string)
 	}
 
 	return &cf, nil

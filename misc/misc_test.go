@@ -1,21 +1,15 @@
 package misc
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/matryer/is"
+)
 
 func TestSuccess(t *testing.T) {
-	if Success(199) {
-		t.Error("Should be error on 199")
-		return
-	}
+	is := is.New(t)
 
-	if Success(300) {
-		t.Error("Should be error on 300")
-		return
-	}
-
-	if !Success(222) {
-		t.Error("Should be success on 222")
-		return
-	}
-
+	is.True(!Success(199))
+	is.True(!Success(300))
+	is.True(Success(200))
 }

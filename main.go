@@ -1,99 +1,82 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
-	"net/http"
+	"io"
 	"os"
-	"time"
+	"os/signal"
+	"syscall"
 
-	"github.com/skibish/ddns/ipprovider/icanhazip"
-	"github.com/skibish/ddns/ipprovider/ipify"
-	"github.com/skibish/ddns/ipprovider/wtfismyip"
 	"github.com/skibish/ddns/updater"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/skibish/ddns/conf"
-	"github.com/skibish/ddns/ipprovider"
 	"github.com/skibish/ddns/notifier"
 )
 
 var (
-	buildVersion    string
-	buildCommitHash string
+	version string
+	commit  string
+	date    string
 )
 
 func main() {
+	if err := run(os.Args, os.Stdout); err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		os.Exit(1)
+	}
+}
+
+func run(args []string, stdout io.Writer) error {
 	log.SetFormatter(&log.TextFormatter{
 		DisableColors: true,
+		FullTimestamp: true,
 	})
 	log.SetLevel(log.DebugLevel)
-	log.SetOutput(os.Stdout)
+	log.SetOutput(stdout)
 
+	flags := flag.NewFlagSet(args[0], flag.ExitOnError)
 	var (
-		reqTimeouts = flag.Duration("req-timeout", 10*time.Second, "Request timeout to external resources")
-		checkPeriod = flag.Duration("check-period", 5*time.Minute, "Check if IP has been changed period")
-		confFile    = flag.String("conf-file", "$HOME/.ddns.yml", "Location of the configuration file")
-		showVersion = flag.Bool("v", false, "Show version and exit")
+		confFile    = flags.String("conf-file", "", "Location of the configuration file. If not provided, searches current directory, then $HOME for ddns.yml file")
+		showVersion = flags.Bool("ver", false, "Show version")
 	)
-	flag.Parse()
-
-	if *showVersion {
-		fmt.Printf("Version: %s\nCommitHash: %s\n", buildVersion, buildCommitHash)
-		return
+	if err := flags.Parse(args[1:]); err != nil {
+		return fmt.Errorf("failed to parse flags: %w", err)
 	}
 
-	// read configuration
-	var errConf error
-	cf, errConf := conf.NewConfiguration(*confFile)
-	if errConf != nil {
-		log.Fatal(errConf.Error())
+	if *showVersion {
+		fmt.Printf("Version: %s\nCommit: %s\nBuild date: %s\n", version, commit, date)
+		return nil
+	}
+
+	cf, err := conf.NewConfiguration(*confFile)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	// try to register all provided hooks
-	for k, v := range cf.Notify {
-		hook, errGet := notifier.GetHook(k, v)
-		if errGet != nil {
-			log.Debugf("Notifier %q not added: %s", k, errGet.Error())
+	for _, v := range cf.Notifications {
+		hook, err := notifier.GetHook(v)
+		if err != nil {
+			log.Debugf("failed to add a notifier: %s", err)
 			continue
 		}
 		log.AddHook(hook)
 	}
 
-	// setup http client
-	c := &http.Client{
-		Timeout: *reqTimeouts,
-	}
+	upd := updater.New(cf)
 
-	// initialize new ipprovider and register IP providers
-	provider := ipprovider.New()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 
-	providerList := []ipprovider.Provider{
-		icanhazip.New(c),
-		wtfismyip.New(c),
-		ipify.New(c),
-	}
+	go func() {
+		<-ctx.Done()
+		log.Debug("shutdown")
+		upd.Stop()
+		stop()
+		os.Exit(0)
+	}()
 
-	if cf.ForceIPV6 {
-		for _, p := range providerList {
-			p.ForceIPV6()
-		}
-	}
-
-	provider.Register(providerList...)
-
-	// Initialize and start updaters
-	for _, domain := range cf.Domains {
-		upd, errUpdater := updater.New(c, provider, cf, domain, *checkPeriod)
-		if errUpdater != nil {
-			log.Fatal(errUpdater)
-		}
-
-		errStart := upd.Start()
-		if errStart != nil {
-			log.Fatal(errStart)
-		}
-	}
-
-	select {}
+	return upd.Start(ctx)
 }

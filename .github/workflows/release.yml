@@ -1,52 +1,45 @@
-on:
-  release:
-    types: [created]
-
 name: release
+
+on:
+  push:
+    tags:
+      - '*'
+
+permissions:
+  contents: write
+
 jobs:
-  build:
-    name: build binaries
+  release:
     runs-on: ubuntu-latest
     steps:
-      - name: Install Go
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.15.x
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Set outputs
-        id: vars
-        run: |
-          echo ::set-output name=tag::${GITHUB_REF#refs/tags/}
-      - name: Build
-        env:
-          RELEASE_TAG: ${{ steps.vars.outputs.tag }}
-        run: |
-          GOOS=linux GOARCH=amd64 go build -ldflags "-X main.buildVersion=$RELEASE_TAG -X main.buildCommitHash=$GITHUB_SHA" -o bin/ddns-Linux-x86_64 .
-          GOOS=darwin GOARCH=amd64 go build -ldflags "-X main.buildVersion=$RELEASE_TAG -X main.buildCommitHash=$GITHUB_SHA" -o bin/ddns-Darwin-x86_64 .
-          GOOS=linux GOARCH=arm GOARM=7 go build -ldflags "-X main.buildVersion=$RELEASE_TAG -X main.buildCommitHash=$GITHUB_SHA" -o bin/ddns-Linux-armv7l .
-          GOOS=windows GOARCH=amd64 go build -ldflags "-X main.buildVersion=$RELEASE_TAG -X main.buildCommitHash=$GITHUB_SHA" -o bin/ddns-Windows-x86_64.exe .
-      - name: upload artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: binaries
-          path: bin/
+          go-version: 1.16
 
-  upload:
-    name: Upload release assets
-    runs-on: ubuntu-latest
-    needs: [build]
-    steps:
-      - uses: actions/checkout@v1
-      - name: Download build artefacts
-        uses: actions/download-artifact@v2
+      - name: Cache Go modules
+        uses: actions/cache@v2
         with:
-          name: binaries
-          path: bin/
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
 
-      - name: Upload release assets
-        uses: skx/github-action-publish-binaries@master
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v2
+        with:
+          version: latest
+          args: release --rm-dist
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          args: './bin/*'
