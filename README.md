@@ -6,21 +6,22 @@
 
 Personal DDNS client with [Digital Ocean Networking](https://www.digitalocean.com/products/networking/) DNS as backend.
 
-*[Read about it in the Blog](https://sergeykibish.com/blog/your-personal-ddns)*
+*[Read about it in the Blog](https://sergeykibish.com/blog/ddns-v4)*
 
 ## Motivation
 
-We have services like [DynDNS](http://dyn.com/dns/), [No-IP](http://www.noip.com/) to access PCs remotely. But do we need them?
-This project is your own DDNS solution and will work for free (thanks to [Digital Ocean Networking](https://www.digitalocean.com/products/networking/) DNS).
+There are services like [DynDNS](http://dyn.com/dns/), [No-IP](http://www.noip.com/) to access PCs remotely.
+But do we need them?
+This is your own DDNS solution which works for free (thanks to [Digital Ocean Networking](https://www.digitalocean.com/products/networking/) DNS).
 
 ## What is DDNS
 
 *From [Wikipedia](https://en.wikipedia.org/wiki/Dynamic_DNS)*
-> Dynamic DNS (DDNS or DynDNS) is a method of automatically updating a name server in the Domain Name System (DNS), often in real time, with the active DDNS configuration of its configured hostnames, addresses or other information.
+> Dynamic DNS (DDNS) is a method of automatically updating a name server in the Domain Name System (DNS), often in real time, with the active DDNS configuration of its configured hostnames, addresses or other information.
 
 ## Installation
 
-Download binary from [releases](https://github.com/skibish/ddns/releases) to `/usr/local/bin/ddns`.
+Download binary from [releases](https://github.com/skibish/ddns/releases).
 
 And start it as:
 
@@ -32,30 +33,22 @@ Or you can download [Docker image](https://hub.docker.com/r/skibish/ddns) and us
 
 ```bash
 docker run \
-  -v /path/to/config.yml:/config/.ddns.yml \
-  skibish/ddns -conf-file /config/.ddns.yml
+  -v /path/to/config.yml:/config/ddns.yml \
+  skibish/ddns -conf-file /config/ddns.yml
 ```
 
 ## Documentation
 
-You can download binary for your OS from [releases page](https://github.com/skibish/ddns/releases).
-
-> **ATTENTION!** Currently tested on Linux and macOS.
-
-Run `ddns -h`, to see help. It will output:
+Run `ddns -h`, to see help.
+It will output:
 
 ```text
 Usage of ./ddns:
-  -check-period duration
-      Check if IP has been changed period (default 5m0s)
   -conf-file string
-      Location of the configuration file (default "$HOME/.ddns.yml")
-  -req-timeout duration
-      Request timeout to external resources (default 10s)
-  -v  Show version and exit
+        Location of the configuration file. If not provided, searches current directory, then $HOME for ddns.yml file
+  -ver
+        Show version
 ```
-
-**Configuration should be supplied.** By default it is read from `$HOME/.ddns.yml`.
 
 You need to setup your domain in Digital Ocean Networks panel.
 
@@ -63,74 +56,71 @@ In your domain name provider configuration point domain to Digital Ocean NS reco
 
 *Refer to: [How To Point to DigitalOcean Nameservers From Common Domain Registrars](https://www.digitalocean.com/community/tutorials/how-to-point-to-digitalocean-nameservers-from-common-domain-registrars)*
 
-Configuration should be in the following format:
+Configuration file `ddns.yml`:
 
 ```yaml
-token: "AMAZING TOKEN"                          # Digital Ocean token
-domains:                                        # Domains to update
-  - "example.com"
-forceIPV6: true                                 # Use IPv6 address resolve (Default false and force IPv4)
-records:                                        # Records of the domains to update
-  - type: "A"                                   # Record type
-    name: "www"                                 # Record name
+# DDNS configuration file.
+
+# Mandatory, DigitalOcean API token.
+# It can be also set using environment variable DDNS_TOKEN.
+token: ""
+
+# By default, IP check occurs every 5 minutes.
+# It can be also set using environment variable DDNS_CHECKPERIOD.
+checkPeriod: "5m"
+
+# By default, timeout to external resources is set to 10 seconds.
+# It can be also set using environment variable DDNS_REQUESTTIMEOUT.
+requestTimeout: "10s"
+
+# By default, IPv6 address is not requested.
+# IPv6 address can be forced by setting it to `true`.
+# It can be also set using environment variable DDNS_IPV6.
+ipv6: false
+
+# List of domains and their records to update.
+domains:
+  example.com:
+  # More details about the fields can be found here:
+  # https://developers.digitalocean.com/documentation/v2/#create-a-new-domain-record
+  - type: "A"
+    name: "www"
   - type: "TXT"
     name: "demo"
-    data: "My IP is {{.IP}} and I am {{.mood}}" # "data" key is optional. You can write here
-                                                # what you want and reference values from "params".
-                                                # Key "IP" is reserved.
+
+    # By default, is set to "{{.IP}}" (key .IP is reserved).
+    # Supports Go template engine.
+    # Additional keys can be set in "params" block below.
+    data: "My IP is {{.IP}} and I am {{.mood}}"
+
+    # By default, 1800 seconds (5 minutes).
+    ttl: 1800
+
+# By default, params is empty.
 params:
   mood: "cool"
-notify:                                         # Optional notifiers
-  smtp:
-    read: below
-  telegram:
-    read: below
-  gotify:
-    read: below
-```
 
-### Notifications
+# By default, notifications is empty.
+notifications:
 
-These notifications are based on [sirupsen/logrus hooks](https://github.com/sirupsen/logrus#hooks).
-Add them to the configuration file as:
+  # Gotify (https://gotify.net)
+- type: "gotify"
+  app_url: "https://gotify.example.com"
+  app_token: ""
+  title: "DDNS" 
 
-```yaml
-# config part from the top
-#...
-
-notify:
-  <name of notification>:
-    # ...configuration
-```
-
-List of supported notifications:
-
-#### SMTP
-
-```yaml
-smtp:
+  # SMTP
+- type: "smtp"
   user: "foo@bar.com"
   password: "1234"
   host: "localhost"
-  port: "22"
+  port: "468"
+  from: "bar@foo.com"
   to: "foo@foo.com"
   subject: "My DDNS sending me a message"
-  secure: true # Optional flag. Set it, if you will send emails with SSL
-```
 
-#### Telegram
-
-```yaml
-telegram:
+  # Telegram (https://telegram.org)
+- type: "telegram"
   token: "telegram bot token"
   chat_id: "1234"
-```
-
-#### Gotify
-
-```yaml
-gotify:
-  app_url: "https://gotify.example.com" # url for gotify
-  app_token: "" # token from gotify app
-  title: "DDNS" #optional title of messages, defaults to DDNS
 ```

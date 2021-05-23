@@ -1,98 +1,132 @@
 package notifier
 
 import (
-	"bufio"
-	"bytes"
 	"errors"
-	"net/smtp"
+	"io"
 	"testing"
 
+	"github.com/matryer/is"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/gomail.v2"
 )
 
-func TestSMTPInit(t *testing.T) {
-	_, errConv := initSMTPNotifier("cfg")
-	if errConv == nil {
-		t.Error("Should be conversion error, but got nothing")
-		return
+func TestSMTPHookNew(t *testing.T) {
+	tcases := []struct {
+		tname string
+		cfg   interface{}
+		isErr bool
+	}{
+		{"ok", map[string]string{"from": "a@a.io", "to": "b@b.io"}, false},
+		{"invalid config", "something unexpected", true},
+		{"incorrect from", map[string]string{"from": "oh no"}, true},
+		{"incorrect to", map[string]string{"from": "oh@no.io", "to": "oh no"}, true},
 	}
 
-	m := make(map[interface{}]interface{})
-	m["user"] = 123
-	_, errValue := initSMTPNotifier(m)
-	if errValue == nil {
-		t.Errorf("Should be error, because value is not a string")
-		return
-	}
+	for _, tc := range tcases {
+		t.Run(tc.tname, func(t *testing.T) {
+			is := is.New(t)
 
-	m = make(map[interface{}]interface{})
-	m[123] = "123"
-	_, errKey := initSMTPNotifier(m)
-	if errKey == nil {
-		t.Errorf("Should be error, because key is not a string")
-		return
-	}
+			_, err := newSMTPHook(tc.cfg)
 
-	m = make(map[interface{}]interface{})
-	m["user"] = "123"
-	s, errUnexpected := initSMTPNotifier(m)
-	if errUnexpected != nil {
-		t.Error(errUnexpected)
-		return
+			if tc.isErr {
+				if err == nil {
+					t.Fail() // should be error
+				}
+				return
+			}
+			is.NoErr(err)
+		})
 	}
-
-	if s.User != "123" {
-		t.Errorf("User should be %q, but got %q", "123", s.User)
-		return
-	}
-
 }
 
-func TestSMTPFire(t *testing.T) {
+type mockSender struct {
+	send  func() error
+	close func() error
+}
 
-	// test, everything is OK
-	grabEmailOK := func(string, smtp.Auth, string, []string, []byte) error {
-		return nil
+func (m mockSender) Send(from string, to []string, msg io.WriterTo) error {
+	return m.send()
+}
+func (m mockSender) Close() error {
+	return m.close()
+}
+
+func TestSMTPHookFire(t *testing.T) {
+	is := is.New(t)
+
+	hook, err := newSMTPHook(map[string]interface{}{
+		"host":     "smtp.email.server",
+		"port":     468,
+		"user":     "yo",
+		"password": "1234",
+		"from":     "yo@yo.co",
+		"to":       "bo@bo.co",
+		"subject":  "ooomg",
+	})
+	is.NoErr(err)
+
+	tcases := []struct {
+		tname      string
+		senderFunc func() (gomail.SendCloser, error)
+		isErr      bool
+	}{
+		{
+			tname: "ok",
+			senderFunc: func() (gomail.SendCloser, error) {
+				m := mockSender{}
+				m.send = func() error {
+					return nil
+				}
+				m.close = func() error {
+					return nil
+				}
+				return m, nil
+			},
+		},
+		{
+			tname: "dialer failed",
+			senderFunc: func() (gomail.SendCloser, error) {
+				m := mockSender{}
+				m.send = func() error {
+					return nil
+				}
+				m.close = func() error {
+					return nil
+				}
+				return m, errors.New("dialer failed")
+			},
+			isErr: true,
+		},
+		{
+			tname: "fail send",
+			senderFunc: func() (gomail.SendCloser, error) {
+				m := mockSender{}
+				m.send = func() error {
+					return errors.New("failed to send")
+				}
+				m.close = func() error {
+					return nil
+				}
+				return m, nil
+			},
+			isErr: true,
+		},
 	}
 
-	var b bytes.Buffer
-	writer := bufio.NewWriter(&b)
+	for _, tc := range tcases {
+		t.Run(tc.tname, func(t *testing.T) {
+			is := is.New(t)
+			hook.senderFunc = tc.senderFunc
+			entry := logrus.Entry{Message: "awesome message", Level: logrus.InfoLevel}
+			err = hook.Fire(&entry)
+			if tc.isErr {
+				if err == nil {
+					is.Fail() // should be error
+				}
+				return
+			}
+			is.NoErr(err)
 
-	s := SMTPConfig{
-		Host:     "example.com",
-		Port:     "1234",
-		User:     "yo@example.com",
-		Password: "1234",
-		To:       "cool@email.address",
-		Subject:  "hello, this is test email",
-		send:     grabEmailOK,
-		errorW:   writer,
-	}
-
-	entry := logrus.Entry{Message: "awesome message", Level: logrus.InfoLevel}
-	errFire := s.Fire(&entry)
-	if errFire != nil {
-		t.Errorf("handled an error on SMTP request: %q", errFire.Error())
-		return
-	}
-
-	// test, got some error from SMTP
-	grabEmailBad := func(string, smtp.Auth, string, []string, []byte) error {
-		return errors.New("something went wrong")
-	}
-	s.send = grabEmailBad
-
-	errFire = s.Fire(&entry)
-	if errFire == nil {
-		t.Error("Should be error, but it's OK")
-		return
-	}
-
-	// test, DEBUG is ignored
-	entry = logrus.Entry{Message: "ignored", Level: logrus.DebugLevel}
-	shouldBeNil := s.Fire(&entry)
-	if shouldBeNil != nil {
-		t.Errorf("Expected nil, on DEBUG, but got %v", shouldBeNil)
-		return
+		})
 	}
 }

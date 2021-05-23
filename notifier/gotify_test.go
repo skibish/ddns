@@ -1,90 +1,80 @@
 package notifier
 
 import (
-	"bufio"
-	"bytes"
-	"errors"
+	"net/http"
 	"testing"
 
+	"github.com/matryer/is"
 	"github.com/sirupsen/logrus"
 )
 
-func TestGotifyInit(t *testing.T) {
-	_, errConv := initGotifyNotifier("cfg")
-	if errConv == nil {
-		t.Error("Should be conversion error, but got nothing")
-		return
+func TestGotifyHookNew(t *testing.T) {
+	is := is.New(t)
+
+	if _, err := newGotifyhook("cfg"); err == nil {
+		is.Fail() // should be error, but got nothing
 	}
 
 	m := make(map[interface{}]interface{})
 	m["app_url"] = 123
-	_, errValue := initGotifyNotifier(m)
-	if errValue == nil {
-		t.Errorf("Should be error, because value is not a string")
-		return
-	}
-
-	m = make(map[interface{}]interface{})
-	m[123] = "app_url"
-	_, errKey := initGotifyNotifier(m)
-	if errKey == nil {
-		t.Errorf("Should be error, because key is not a string")
+	if _, err := newGotifyhook(m); err == nil {
+		is.Fail() // should fail because not a valid string
 		return
 	}
 
 	m = make(map[interface{}]interface{})
 	m["app_url"] = "https://gotify.example.com/"
-	g, errUnexpected := initGotifyNotifier(m)
-	if errUnexpected != nil {
-		t.Error(errUnexpected)
-		return
-	}
+	hook, err := newGotifyhook(m)
+	is.NoErr(err)
+	is.Equal(hook.AppURL, "https://gotify.example.com")
+	is.Equal(hook.Title, "DDNS")
 
-	if g.AppURL != "https://gotify.example.com" {
-		t.Errorf("app_url should be %q, but got %q", "https://gotify.example.com", g.AppURL)
-		return
+	m["app_url"] = "something bad"
+	if _, err := newGotifyhook(m); err == nil {
+		is.Fail() // should fail because incorrect url
 	}
 
 }
 
 func TestGotifyFire(t *testing.T) {
-
-	var b bytes.Buffer
-	writer := bufio.NewWriter(&b)
-
-	g := GotifyConfig{
-		AppURL:   "https://example.com/",
-		AppToken: "1234",
-		errorW:   writer,
+	tcases := []struct {
+		tname      string
+		statusCode int
+		isErr      bool
+	}{
+		{"ok", http.StatusOK, false},
+		{"fail do", http.StatusTeapot, true},
+		{"fail status", http.StatusTeapot, true},
 	}
 
-	g.send = func(msg string) error {
-		return nil
-	}
+	for _, tc := range tcases {
+		t.Run(tc.tname, func(t *testing.T) {
+			is := is.New(t)
 
-	entry := logrus.Entry{Message: "awesome message", Level: logrus.InfoLevel}
-	errFire := g.Fire(&entry)
-	if errFire != nil {
-		t.Errorf("handled an error on Gotify request: %q", errFire.Error())
-		return
-	}
+			url, close := httpHelper(t, tc.tname, nil, tc.statusCode)
+			defer close()
 
-	// test, got some error from Gotify
-	g.send = func(string) error {
-		return errors.New("something went wrong")
-	}
+			hook, err := newGotifyhook(map[string]interface{}{
+				"app_url": url,
+				"token":   "1234",
+				"title":   "DDNS",
+			})
+			is.NoErr(err)
 
-	errFire = g.Fire(&entry)
-	if errFire == nil {
-		t.Error("Should be error, but it's OK")
-		return
-	}
+			if tc.tname == "fail do" {
+				hook.AppURL = " "
+			}
 
-	// test, DEBUG is ignored
-	entry = logrus.Entry{Message: "ignored", Level: logrus.DebugLevel}
-	shouldBeNil := g.Fire(&entry)
-	if shouldBeNil != nil {
-		t.Errorf("Expected nil, on DEBUG, but got %v", shouldBeNil)
-		return
+			entry := logrus.Entry{Message: tc.tname, Level: logrus.InfoLevel}
+			err = hook.Fire(&entry)
+
+			if tc.isErr {
+				if err == nil {
+					t.Fail() // should be error
+				}
+				return
+			}
+			is.NoErr(err)
+		})
 	}
 }

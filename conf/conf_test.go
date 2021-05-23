@@ -5,15 +5,16 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/matryer/is"
 )
 
 func createTmpFile(t *testing.T) (string, func()) {
-	t.Helper()
+	is := is.New(t)
+	is.Helper()
 
 	f, err := ioutil.TempFile("", "demo-*.yml")
-	if err != nil {
-		t.Errorf("Failed to create temp file")
-	}
+	is.NoErr(err)
 
 	rm := func() {
 		os.Remove(f.Name())
@@ -22,107 +23,82 @@ func createTmpFile(t *testing.T) (string, func()) {
 }
 
 func TestNewConfigurationMultipleDomainsSuccess(t *testing.T) {
+	is := is.New(t)
 	fname, rm := createTmpFile(t)
 	defer rm()
 
-	errWrite := ioutil.WriteFile(fname, []byte(`token: amazing
+	err := ioutil.WriteFile(fname, []byte(`token: amazing
 domains:
-  - example.com
-  - example.net
-records:
-  - type: A
-    name: www`), 0644)
+  example.com:
+    - type: A
+      name: www
+  example.net:
+    - type: A
+      name: www`), 0644)
 
-	if errWrite != nil {
-		t.Error("Failed to write file")
-		return
-	}
+	is.NoErr(err)
 
-	conf, errConf := NewConfiguration(fname)
-	if errConf != nil {
-		t.Errorf("Got error: %s", errConf.Error())
-		return
-	}
+	conf, err := NewConfiguration(fname)
+	is.NoErr(err)
 
-	if len(conf.Domains) != 2 {
-		t.Errorf("Expected two domains in the list, got %v", len(conf.Domains))
-		return
-	}
+	is.Equal(len(conf.Domains), 2)
 
-	if conf.Domains[0] != "example.com" {
-		t.Errorf("Expected example.com, got %s", conf.Domains[0])
-		return
-	}
+	_, ok := conf.Domains["example.com"]
+	is.True(ok)
 
-	if conf.Domains[1] != "example.net" {
-		t.Errorf("Expected example.net, got %s", conf.Domains[0])
-		return
-	}
-
-	if conf.Records[0].Name != "www" {
-		t.Errorf("Expected www, got %s", conf.Records[0].Name)
-		return
-	}
+	_, ok = conf.Domains["example.net"]
+	is.True(ok)
+	is.Equal(conf.Domains["example.com"][0].Name, "www")
 }
 
 func TestNewConfigurationReadFail(t *testing.T) {
-	filePath := "/tmp/demo1.yml"
-
-	_, err := NewConfiguration(filePath)
+	is := is.New(t)
+	_, err := NewConfiguration("/tmp/demo1.yml")
 	if err == nil {
-		t.Errorf("Everything is OK, but should be error: %v", err)
-		return
+		is.Fail() // should be error because no such file
 	}
 }
 
 func TestNewConfigurationParseError(t *testing.T) {
+	is := is.New(t)
 	fname, rm := createTmpFile(t)
 	defer rm()
 
-	errWrite := ioutil.WriteFile(fname, []byte(`is not yml`), 0644)
+	err := ioutil.WriteFile(fname, []byte(`is not yml`), 0644)
+	is.NoErr(err)
 
-	if errWrite != nil {
-		t.Error("Failed to write file")
-		return
-	}
-
-	_, errConf := NewConfiguration(fname)
-	if !strings.Contains(errConf.Error(), "yaml: unmarshal errors") {
-		t.Error("Should be error, but everything is OK")
-		return
-	}
+	_, err = NewConfiguration(fname)
+	is.True(strings.Contains(err.Error(), "yaml: unmarshal errors"))
 }
 
 func TestNewConfigurationValid(t *testing.T) {
+	is := is.New(t)
 	fname, rm := createTmpFile(t)
 	defer rm()
 
 	// check for token
-	errWrite := ioutil.WriteFile(fname, []byte(`token: ""
+	err := ioutil.WriteFile(fname, []byte(`token: ""
 domains:
-  - example.com`), 0644)
+  example.com:`), 0644)
+	is.NoErr(err)
 
-	if errWrite != nil {
-		t.Error("Failed to write file")
-		return
-	}
-	_, errConf := NewConfiguration(fname)
-	if errConf.Error() != "token can't be empty" {
-		t.Error("Should be error, but everything is OK")
-		return
-	}
+	_, err = NewConfiguration(fname)
+	is.True(strings.Contains(err.Error(), "token can't be empty"))
 
 	// check for domains
-	errWrite3 := ioutil.WriteFile(fname, []byte(`token: abc
-domains: [""]`), 0644)
+	err = ioutil.WriteFile(fname, []byte(`token: abc
+domains:`), 0644)
+	is.NoErr(err)
 
-	if errWrite3 != nil {
-		t.Error("Failed to write file")
-		return
-	}
-	_, errConf3 := NewConfiguration(fname)
-	if errConf3.Error() != "domains can't be empty" {
-		t.Error("Should be error, but everything is OK")
-		return
-	}
+	_, err = NewConfiguration(fname)
+	is.True(strings.Contains(err.Error(), "domains can't be empty"))
+
+	// check for domain records
+	err = ioutil.WriteFile(fname, []byte(`token: abc
+domains:
+  example.com: []`), 0644)
+	is.NoErr(err)
+
+	_, err = NewConfiguration(fname)
+	is.True(strings.Contains(err.Error(), "records can't be empty"))
 }

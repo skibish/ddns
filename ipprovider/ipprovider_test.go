@@ -1,57 +1,84 @@
 package ipprovider
 
 import (
-	"bufio"
-	"bytes"
-	"errors"
+	"context"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/matryer/is"
 	log "github.com/sirupsen/logrus"
 )
 
-type fakeProviderOne struct{}
-
-func (f fakeProviderOne) GetIP() (string, error) {
-	return "", errors.New("No IP found")
+func TestMain(m *testing.M) {
+	log.SetOutput(ioutil.Discard)
+	os.Exit(m.Run())
 }
 
-func (f fakeProviderOne) ForceIPV6() {
-}
+func httpHelper(t *testing.T, response string, headers map[string]string, statusCode int) (string, func()) {
+	is := is.New(t)
+	is.Helper()
 
-type fakeProviderTwo struct{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		for k, v := range headers {
+			w.Header().Add(k, v)
+		}
+		w.WriteHeader(statusCode)
+		w.Write([]byte(response))
+	}))
 
-func (f fakeProviderTwo) GetIP() (string, error) {
-	return "45.45.45.45", nil
-}
-
-func (f fakeProviderTwo) ForceIPV6() {
+	return server.URL, server.Close
 }
 
 func TestGetIP(t *testing.T) {
-	var b bytes.Buffer
-	bw := bufio.NewWriter(&b)
-	log.SetOutput(bw)
+	t.Run("ipv6", func(t *testing.T) {
+		is := is.New(t)
 
-	i := New()
+		ipp := New(true, 1*time.Second)
+		is.True(strings.Contains(ipp.(*IPProvider).providers[0].(*icanhazip).url, "6"))
+	})
 
-	i.Register(&fakeProviderOne{}, &fakeProviderTwo{})
-
-	ip := i.GetIP()
-	if ip != "45.45.45.45" {
-		t.Error("aaa")
-		return
+	tcases := []struct {
+		tname    string
+		response string
+		expected string
+		isErr    bool
+	}{
+		{"ok", `{"ip": "45.45.45.45"}`, "45.45.45.45", false},
+		{"fail", "something bad", "45.45.45.45", true},
 	}
 
-	errFlush := bw.Flush()
-	if errFlush != nil {
-		t.Errorf("Error flushing log message: %q", errFlush.Error())
-		return
-	}
+	for _, tc := range tcases {
+		t.Run(tc.tname, func(t *testing.T) {
+			is := is.New(t)
 
-	if !strings.Contains(b.String(), "level=warning") {
-		t.Error("There should be level=warning in log")
-		return
-	}
+			ipp := New(false, 1*time.Second)
 
+			url, close := httpHelper(t, tc.response, nil, http.StatusOK)
+			defer close()
+
+			ipp.(*IPProvider).providers = []ipProvider{
+				&ipify{
+					c:       &http.Client{},
+					url:     url,
+					timeout: 1 * time.Second,
+				},
+			}
+
+			ip, err := ipp.GetIP(context.Background())
+			if tc.isErr {
+				if err == nil {
+					t.Fail() // should be error
+				}
+				return
+			}
+
+			is.Equal(ip, tc.expected)
+			is.NoErr(err)
+		})
+	}
 }
