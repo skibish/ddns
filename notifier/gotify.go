@@ -75,7 +75,7 @@ func (hook *gotifyHook) Fire(entry *logrus.Entry) error {
 
 // Levels return array of levels
 func (hook *gotifyHook) Levels() []logrus.Level {
-	return AllowedLevels()
+	return allowedLevels()
 }
 
 // Source: https://golangcode.com/how-to-check-if-a-string-is-a-url/

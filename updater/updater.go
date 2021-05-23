@@ -81,7 +81,7 @@ func (u *Updater) Start(ctx context.Context) (err error) {
 	}
 }
 
-// Stops stops the updater.
+// Stop stops the updater.
 func (u *Updater) Stop() {
 	u.ticker.Stop()
 	u.shutdown <- true

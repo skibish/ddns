@@ -70,9 +70,9 @@ func NewConfiguration(path string) (*Configuration, error) {
 	if err := v.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			return nil, errors.New("configuration file not found")
-		} else {
-			return nil, fmt.Errorf("failed to read configuration file: %v", err)
 		}
+
+		return nil, fmt.Errorf("failed to read configuration file: %v", err)
 	}
 	log.Debugf("using the following configuration file: %s", v.ConfigFileUsed())
 

@@ -71,5 +71,5 @@ func (hook *smtpHook) Fire(entry *logrus.Entry) error {
 
 // Levels return array of levels
 func (hook *smtpHook) Levels() []logrus.Level {
-	return AllowedLevels()
+	return allowedLevels()
 }

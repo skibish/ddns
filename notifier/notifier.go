@@ -8,13 +8,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type HookType struct {
+type hookType struct {
 	Type string
 }
 
 // GetHook returns initialized notifier as hook for Logrus
 func GetHook(cfg interface{}) (logrus.Hook, error) {
-	var ht HookType
+	var ht hookType
 	if err := mapstructure.Decode(cfg, &ht); err != nil {
 		return nil, err
 	}
@@ -31,7 +31,7 @@ func GetHook(cfg interface{}) (logrus.Hook, error) {
 	}
 }
 
-func AllowedLevels() []logrus.Level {
+func allowedLevels() []logrus.Level {
 	// ignore DEBUG messages
 	return []logrus.Level{
 		logrus.InfoLevel,

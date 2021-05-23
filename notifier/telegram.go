@@ -66,5 +66,5 @@ func (hook *telegramHook) Fire(entry *logrus.Entry) error {
 
 // Levels return array of levels
 func (hook *telegramHook) Levels() []logrus.Level {
-	return AllowedLevels()
+	return allowedLevels()
 }
