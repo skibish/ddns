@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/skibish/ddns/misc"
 )
 
@@ -28,6 +29,11 @@ type Record struct {
 
 type domainRecords struct {
 	Records []Record `json:"domain_records"`
+	Links   struct {
+		Pages struct {
+			Next string `json:"next"`
+		} `json:"pages"`
+	} `json:"links"`
 }
 
 // DomainsService is an interface to interact with DNS records.
@@ -57,7 +63,7 @@ func New(token string, timeout time.Duration) *DigitalOcean {
 
 // List return domain DNS records.
 func (d *DigitalOcean) List(ctx context.Context, domain string) ([]Record, error) {
-	req, err := d.prepareRequest(http.MethodGet, fmt.Sprintf("/domains/%s/records", domain), nil)
+	req, err := d.prepareRequest(http.MethodGet, fmt.Sprintf("/domains/%s/records?per_page=200", domain), nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare a request: %w", err)
 	}
@@ -81,6 +87,10 @@ func (d *DigitalOcean) List(ctx context.Context, domain string) ([]Record, error
 	var records domainRecords
 	if err := json.NewDecoder(res.Body).Decode(&records); err != nil {
 		return nil, fmt.Errorf("failed to decode the response: %w", err)
+	}
+
+	if records.Links.Pages.Next != "" {
+		log.Debugf("there are more than 200 dns record for %s domain, are you sure that's correct? if yes, please raise an issue here: https://github.com/skibish/ddns/issues/new", domain)
 	}
 
 	return records.Records, nil
