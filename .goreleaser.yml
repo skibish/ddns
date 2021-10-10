@@ -37,7 +37,7 @@ dockers:
   - 'skibish/ddns:{{ .Tag }}'
   - 'skibish/ddns:latest'
   dockerfile: Dockerfile
-  use_buildx: true
+  use: buildx
   build_flag_templates:
   - "--pull"
   - "--label=org.opencontainers.image.created={{.Date}}"
