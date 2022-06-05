@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/matryer/is"
 )
@@ -101,4 +102,30 @@ domains:
 
 	_, err = NewConfiguration(fname)
 	is.True(strings.Contains(err.Error(), "records can't be empty"))
+}
+
+func TestEnvVarsAreRead(t *testing.T) {
+
+	is := is.New(t)
+	fname, rm := createTmpFile(t)
+	defer rm()
+
+	err := ioutil.WriteFile(fname, []byte(`domains:
+  example.com:
+    - type: A
+      name: www`), 0644)
+
+	is.NoErr(err)
+
+	os.Setenv("DDNS_TOKEN", "abc")
+	os.Setenv("DDNS_CHECKPERIOD", "60s")
+	os.Setenv("DDNS_REQUESTTIMEOUT", "12s")
+	os.Setenv("DDNS_IPV6", "true")
+	conf, err := NewConfiguration(fname)
+	is.NoErr(err)
+
+	is.Equal("abc", conf.Token)
+	is.Equal(60*time.Second, conf.CheckPeriod)
+	is.Equal(12*time.Second, conf.RequestTimeout)
+	is.Equal(true, conf.IPv6)
 }
