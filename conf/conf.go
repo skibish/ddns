@@ -56,6 +56,7 @@ func NewConfiguration(path string) (*Configuration, error) {
 	v.AddConfigPath(".")
 	v.AddConfigPath("$HOME")
 
+	v.SetDefault("Token", "")
 	v.SetDefault("CheckPeriod", 5*time.Minute)
 	v.SetDefault("RequestTimeout", 10*time.Second)
 	v.SetDefault("IPv6", false)
