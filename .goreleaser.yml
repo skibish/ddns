@@ -40,6 +40,8 @@ changelog:
 dockers:
 - image_templates:
   - 'skibish/ddns:{{ .Tag }}-amd64'
+  goos: linux
+  goarch: amd64
   dockerfile: Dockerfile
   use: buildx
   build_flag_templates:
@@ -52,6 +54,8 @@ dockers:
   - "--platform=linux/amd64"
 - image_templates:
   - 'skibish/ddns:{{ .Tag }}-arm64'
+  goos: linux
+  goarch: arm64
   dockerfile: Dockerfile
   use: buildx
   build_flag_templates:
@@ -64,6 +68,9 @@ dockers:
   - "--platform=linux/arm64"
 - image_templates:
   - 'skibish/ddns:{{ .Tag }}-armv6'
+  goos: linux
+  goarch: arm
+  goarm: 6
   dockerfile: Dockerfile
   use: buildx
   build_flag_templates:
@@ -76,6 +83,9 @@ dockers:
   - "--platform=linux/arm/v6"
 - image_templates:
   - 'skibish/ddns:{{ .Tag }}-armv7'
+  goos: linux
+  goarch: arm
+  goarm: 7
   dockerfile: Dockerfile
   use: buildx
   build_flag_templates:
@@ -88,6 +98,8 @@ dockers:
   - "--platform=linux/arm/v7"
 - image_templates:
   - 'skibish/ddns:{{ .Tag }}-i386'
+  goos: linux
+  goarch: 386
   dockerfile: Dockerfile
   use: buildx
   build_flag_templates:
