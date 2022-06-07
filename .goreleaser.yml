@@ -13,6 +13,7 @@ builds:
     goarm:
       - 6
       - 7
+
 archives:
   - replacements:
       darwin: Darwin
@@ -20,10 +21,13 @@ archives:
       windows: Windows
       386: i386
       amd64: x86_64
+
 checksum:
   name_template: 'checksums.txt'
+
 snapshot:
   name_template: "{{ .Tag }}-next"
+
 changelog:
   sort: asc
   filters:
@@ -32,10 +36,12 @@ changelog:
       - '^test:'
       - Merge pull request
       - Merge branch
+
 dockers:
 - image_templates:
-  - 'skibish/ddns:{{ .Tag }}'
-  - 'skibish/ddns:latest'
+  - 'skibish/ddns:{{ .Tag }}-amd64'
+  goos: linux
+  goarch: amd64
   dockerfile: Dockerfile
   use: buildx
   build_flag_templates:
@@ -46,3 +52,77 @@ dockers:
   - "--label=org.opencontainers.image.version={{.Version}}"
   - "--label=org.opencontainers.image.source={{.GitURL}}"
   - "--platform=linux/amd64"
+- image_templates:
+  - 'skibish/ddns:{{ .Tag }}-arm64'
+  goos: linux
+  goarch: arm64
+  dockerfile: Dockerfile
+  use: buildx
+  build_flag_templates:
+  - "--pull"
+  - "--label=org.opencontainers.image.created={{.Date}}"
+  - "--label=org.opencontainers.image.name={{.ProjectName}}"
+  - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+  - "--label=org.opencontainers.image.version={{.Version}}"
+  - "--label=org.opencontainers.image.source={{.GitURL}}"
+  - "--platform=linux/arm64"
+- image_templates:
+  - 'skibish/ddns:{{ .Tag }}-armv6'
+  goos: linux
+  goarch: arm
+  goarm: 6
+  dockerfile: Dockerfile
+  use: buildx
+  build_flag_templates:
+  - "--pull"
+  - "--label=org.opencontainers.image.created={{.Date}}"
+  - "--label=org.opencontainers.image.name={{.ProjectName}}"
+  - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+  - "--label=org.opencontainers.image.version={{.Version}}"
+  - "--label=org.opencontainers.image.source={{.GitURL}}"
+  - "--platform=linux/arm/v6"
+- image_templates:
+  - 'skibish/ddns:{{ .Tag }}-armv7'
+  goos: linux
+  goarch: arm
+  goarm: 7
+  dockerfile: Dockerfile
+  use: buildx
+  build_flag_templates:
+  - "--pull"
+  - "--label=org.opencontainers.image.created={{.Date}}"
+  - "--label=org.opencontainers.image.name={{.ProjectName}}"
+  - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+  - "--label=org.opencontainers.image.version={{.Version}}"
+  - "--label=org.opencontainers.image.source={{.GitURL}}"
+  - "--platform=linux/arm/v7"
+- image_templates:
+  - 'skibish/ddns:{{ .Tag }}-i386'
+  goos: linux
+  goarch: 386
+  dockerfile: Dockerfile
+  use: buildx
+  build_flag_templates:
+  - "--pull"
+  - "--label=org.opencontainers.image.created={{.Date}}"
+  - "--label=org.opencontainers.image.name={{.ProjectName}}"
+  - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+  - "--label=org.opencontainers.image.version={{.Version}}"
+  - "--label=org.opencontainers.image.source={{.GitURL}}"
+  - "--platform=linux/386"
+
+docker_manifests:
+- name_template: skibish/ddns:{{ .Tag }}
+  image_templates:
+  - skibish/ddns:{{ .Tag }}-amd64
+  - skibish/ddns:{{ .Tag }}-arm64
+  - skibish/ddns:{{ .Tag }}-armv6
+  - skibish/ddns:{{ .Tag }}-armv7
+  - skibish/ddns:{{ .Tag }}-i386
+- name_template: skibish/ddns:latest
+  image_templates:
+  - skibish/ddns:{{ .Tag }}-amd64
+  - skibish/ddns:{{ .Tag }}-arm64
+  - skibish/ddns:{{ .Tag }}-armv6
+  - skibish/ddns:{{ .Tag }}-armv7
+  - skibish/ddns:{{ .Tag }}-i386
