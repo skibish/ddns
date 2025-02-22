@@ -17,7 +17,7 @@ func httpHelper(t *testing.T, response string, headers map[string]string, status
 			w.Header().Add(k, v)
 		}
 		w.WriteHeader(statusCode)
-		w.Write([]byte(response))
+		_, _ = w.Write([]byte(response))
 	}))
 
 	return server.URL, server.Close

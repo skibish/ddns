@@ -2,7 +2,7 @@ package ipprovider
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -15,7 +15,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	os.Exit(m.Run())
 }
 
@@ -28,7 +28,7 @@ func httpHelper(t *testing.T, response string, headers map[string]string, status
 			w.Header().Add(k, v)
 		}
 		w.WriteHeader(statusCode)
-		w.Write([]byte(response))
+		_, _ = w.Write([]byte(response))
 	}))
 
 	return server.URL, server.Close

@@ -3,7 +3,7 @@ package ipprovider
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -50,7 +50,7 @@ func (i *icanhazip) GetIP(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("status code is not in success range: %d", resp.StatusCode)
 	}
 
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("failed to read the body of the response: %d", resp.StatusCode)
 	}
