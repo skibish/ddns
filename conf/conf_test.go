@@ -1,7 +1,6 @@
 package conf
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -14,7 +13,7 @@ func createTmpFile(t *testing.T) (string, func()) {
 	is := is.New(t)
 	is.Helper()
 
-	f, err := ioutil.TempFile("", "demo-*.yml")
+	f, err := os.CreateTemp("", "demo-*.yml")
 	is.NoErr(err)
 
 	rm := func() {
@@ -28,7 +27,7 @@ func TestNewConfigurationMultipleDomainsSuccess(t *testing.T) {
 	fname, rm := createTmpFile(t)
 	defer rm()
 
-	err := ioutil.WriteFile(fname, []byte(`token: amazing
+	err := os.WriteFile(fname, []byte(`token: amazing
 domains:
   example.com:
     - type: A
@@ -65,7 +64,7 @@ func TestNewConfigurationParseError(t *testing.T) {
 	fname, rm := createTmpFile(t)
 	defer rm()
 
-	err := ioutil.WriteFile(fname, []byte(`is not yml`), 0644)
+	err := os.WriteFile(fname, []byte(`is not yml`), 0644)
 	is.NoErr(err)
 
 	_, err = NewConfiguration(fname)
@@ -78,7 +77,7 @@ func TestNewConfigurationValid(t *testing.T) {
 	defer rm()
 
 	// check for token
-	err := ioutil.WriteFile(fname, []byte(`token: ""
+	err := os.WriteFile(fname, []byte(`token: ""
 domains:
   example.com:`), 0644)
 	is.NoErr(err)
@@ -87,7 +86,7 @@ domains:
 	is.True(strings.Contains(err.Error(), "token can't be empty"))
 
 	// check for domains
-	err = ioutil.WriteFile(fname, []byte(`token: abc
+	err = os.WriteFile(fname, []byte(`token: abc
 domains:`), 0644)
 	is.NoErr(err)
 
@@ -95,7 +94,7 @@ domains:`), 0644)
 	is.True(strings.Contains(err.Error(), "domains can't be empty"))
 
 	// check for domain records
-	err = ioutil.WriteFile(fname, []byte(`token: abc
+	err = os.WriteFile(fname, []byte(`token: abc
 domains:
   example.com: []`), 0644)
 	is.NoErr(err)
@@ -110,7 +109,7 @@ func TestEnvVarsAreRead(t *testing.T) {
 	fname, rm := createTmpFile(t)
 	defer rm()
 
-	err := ioutil.WriteFile(fname, []byte(`domains:
+	err := os.WriteFile(fname, []byte(`domains:
   example.com:
     - type: A
       name: www`), 0644)

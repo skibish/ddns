@@ -23,7 +23,7 @@ func httpHelper(t *testing.T, reqMethod, path, res string, resCode int) (string,
 		is.Equal(r.URL.Path, path)
 
 		w.WriteHeader(resCode)
-		w.Write([]byte(res))
+		_, _ = w.Write([]byte(res))
 	}))
 
 	return server.URL, server.Close
