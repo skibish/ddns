@@ -46,7 +46,7 @@ func (hook *gotifyHook) send(msg string) error {
 	form.Add("message", msg)
 
 	url := fmt.Sprintf("%s/message?token=%s", hook.AppURL, hook.AppToken)
-	req, err := http.NewRequest(http.MethodGet, url, strings.NewReader(form.Encode()))
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(form.Encode()))
 	if err != nil {
 		return fmt.Errorf("failed to create a request: %w", err)
 	}
