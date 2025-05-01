@@ -41,7 +41,7 @@ func TestTelegramHookFire(t *testing.T) {
 		t.Run(tc.tname, func(t *testing.T) {
 			is := is.New(t)
 
-			url, close := httpHelper(t, tc.tname, nil, tc.statusCode)
+			url, close := httpHelper(t, tc.tname, http.MethodGet, nil, tc.statusCode)
 			defer close()
 
 			hook, err := newTelegramHook(map[string]interface{}{

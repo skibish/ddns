@@ -8,11 +8,15 @@ import (
 	"github.com/matryer/is"
 )
 
-func httpHelper(t *testing.T, response string, headers map[string]string, statusCode int) (string, func()) {
+func httpHelper(t *testing.T, response string, requestMethod string, headers map[string]string, statusCode int) (string, func()) {
 	is := is.New(t)
 	is.Helper()
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		is.Helper()
+
+		is.Equal(r.Method, requestMethod)
+
 		for k, v := range headers {
 			w.Header().Add(k, v)
 		}
