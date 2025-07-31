@@ -46,24 +46,32 @@ func (r *rateLimiterHook) RecordEvent() {
 
 func (r *rateLimiterHook) IsLimitCrossed() bool {
 
+	limitCrossed := false
+
+	defer func() {
+		if r := recover(); r != nil {
+			// Handling panic. A false will be returned in this situation
+		}
+	}()
+
 	if r.lastEventIndex == -1 {
-		return false
+		return limitCrossed
 	}
 
 	lastEventTimeStamp := r.getLastEventTimestamp()
 	oldestEventTimeStamp, completeRoundFlag := r.getOldestEventTimestamp()
 
 	if lastEventTimeStamp.Equal(oldestEventTimeStamp) {
-		return false
+		return limitCrossed
 	}
 
 	diffDuration := lastEventTimeStamp.Sub(oldestEventTimeStamp).Seconds()
 
 	if diffDuration <= r.Duration.Seconds() && completeRoundFlag {
-		return true
+		limitCrossed = true
 	}
 
-	return false
+	return limitCrossed
 }
 
 func (r *rateLimiterHook) getLastEventTimestamp() time.Time {
