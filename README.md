@@ -118,6 +118,7 @@ notifications:
   from: "bar@foo.com"
   to: "foo@foo.com"
   subject: "My DDNS sending me a message"
+  rateLimit: 10 # Max 10 mails will be sent under 60 min window
 
   # Telegram (https://telegram.org)
 - type: "telegram"

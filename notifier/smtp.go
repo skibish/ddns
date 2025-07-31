@@ -18,7 +18,11 @@ type smtpHook struct {
 	From       string
 	To         string
 	Subject    string
+	RateLimit  int
 	senderFunc func() (gomail.SendCloser, error)
+
+	rateLimiterHook *rateLimiterHook
+	rateLimitActive bool
 }
 
 // newSMTPHook initializes SMTPConfig structure.
@@ -36,6 +40,13 @@ func newSMTPHook(cfg interface{}) (*smtpHook, error) {
 		return nil, fmt.Errorf("failed to parse to address: %w", err)
 	}
 
+	if hook.RateLimit != 0 {
+		hook.rateLimiterHook = &rateLimiterHook{
+			MaxEvents: hook.RateLimit,
+		}
+		hook.rateLimitActive = true
+	}
+
 	hook.senderFunc = func() (gomail.SendCloser, error) {
 		d := gomail.NewDialer(hook.Host, hook.Port, hook.User, hook.Password)
 		s, err := d.Dial()
@@ -51,6 +62,11 @@ func newSMTPHook(cfg interface{}) (*smtpHook, error) {
 
 // Fire fires hook
 func (hook *smtpHook) Fire(entry *logrus.Entry) error {
+
+	if hook.rateLimitActive && hook.rateLimiterHook.IsLimitCrossed() {
+		return fmt.Errorf("email fire rejected due to rate limit exceeded")
+	}
+
 	m := gomail.NewMessage()
 	m.SetHeader("From", hook.From)
 	m.SetHeader("To", hook.To)
@@ -64,6 +80,10 @@ func (hook *smtpHook) Fire(entry *logrus.Entry) error {
 
 	if err := gomail.Send(s, m); err != nil {
 		return err
+	}
+
+	if hook.rateLimitActive {
+		hook.rateLimiterHook.RecordEvent()
 	}
 
 	return nil
