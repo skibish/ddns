@@ -32,10 +32,8 @@ func GetHook(cfg interface{}) (logrus.Hook, error) {
 }
 
 func allowedLevels() []logrus.Level {
-	// ignore DEBUG messages
 	return []logrus.Level{
 		logrus.InfoLevel,
-		logrus.WarnLevel,
 		logrus.ErrorLevel,
 		logrus.FatalLevel,
 		logrus.PanicLevel,

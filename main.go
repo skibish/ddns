@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -23,20 +24,20 @@ var (
 )
 
 func main() {
-	if err := run(os.Args, os.Stdout); err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "%s\n", err)
-		os.Exit(1)
-	}
-}
-
-func run(args []string, stdout io.Writer) error {
 	log.SetFormatter(&log.TextFormatter{
 		DisableColors: true,
 		FullTimestamp: true,
 	})
 	log.SetLevel(log.DebugLevel)
-	log.SetOutput(stdout)
+	log.SetOutput(os.Stdout)
 
+	if err := run(os.Args, os.Stdout); err != nil {
+		log.Errorf("ddns is terminating: %v", errors.Unwrap(err))
+		os.Exit(1)
+	}
+}
+
+func run(args []string, stdout io.Writer) error {
 	flags := flag.NewFlagSet(args[0], flag.ExitOnError)
 	var (
 		confFile    = flags.String("conf-file", "", "Location of the configuration file. If not provided, searches current directory, then $HOME for ddns.yml file")
@@ -47,13 +48,13 @@ func run(args []string, stdout io.Writer) error {
 	}
 
 	if *showVersion {
-		fmt.Printf("Version: %s\nCommit: %s\nBuild date: %s\n", version, commit, date)
+		fmt.Fprintf(stdout, "Version: %s\nCommit: %s\nBuild date: %s\n", version, commit, date)
 		return nil
 	}
 
 	cf, err := conf.NewConfiguration(*confFile)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	// try to register all provided hooks

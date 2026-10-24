@@ -68,13 +68,12 @@ func (u *Updater) Start(ctx context.Context) (err error) {
 			if !updated {
 				continue
 			}
-			log.Infof("ip has been updated to %s", u.ip)
-
 			log.Debug("updating dns records", u.ip)
 			if err := u.sync(ctx); err != nil {
 				return fmt.Errorf("failed to update dns records: %w", err)
 			}
 			log.Debug("done")
+			log.Infof("ip has been updated to %s", u.ip)
 		case <-u.shutdown:
 			return nil
 		}
